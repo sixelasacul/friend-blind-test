@@ -37,6 +37,8 @@ export default defineSchema({
     name: v.string(),
     ready: v.boolean(),
     score: v.number(),
+    online: v.boolean(),
+    timeoutFn: v.optional(v.id("_scheduled_functions")),
   }).index("by_lobby", ["lobbyId"]),
 
   artists: defineTable({

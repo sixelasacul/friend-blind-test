@@ -42,13 +42,23 @@ export const ready = mutation({
       ready: true,
     });
 
-    const players = await getPlayers(ctx, player.lobbyId);
+    const lobbyId = player.lobbyId;
 
-    if (players.length < 2 || !players.every((p) => p.ready)) return;
+    const players = await getPlayers(ctx, lobbyId);
 
-    await ctx.db.patch(player.lobbyId, {
-      status: "paused",
-    });
+    const onlinePlayers = players.filter((player) => player.online);
+
+    if (onlinePlayers.length < 2 || !onlinePlayers.every((p) => p.ready))
+      return;
+
+    const offlinePlayers = players.filter((player) => !player.online);
+
+    await Promise.all([
+      await ctx.db.patch(player.lobbyId, {
+        status: "paused",
+      }),
+      ...offlinePlayers.map((player) => ctx.db.delete(player._id)),
+    ]);
 
     // I want this to run immediately, even though the game may start later
     await ctx.scheduler.runAfter(0, internal.spotify.fetchSongs, {

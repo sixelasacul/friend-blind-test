@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { STATUS_TO_ROUTE_MAP } from "../../hooks/useGameInfo";
+import { usePresence } from "../../hooks/usePresence";
 
 export const Route = createFileRoute("/$lobbyId")({
   component: RouteComponent,
@@ -82,6 +83,8 @@ export const Route = createFileRoute("/$lobbyId")({
 // should show player name + edit
 function RouteComponent() {
   const { playerId, lobbyId } = Route.useRouteContext();
+
+  usePresence(playerId);
   const playerInfo = useQuery(api.players.getPlayerInfo, { playerId });
 
   const [name, setName] = useState("");

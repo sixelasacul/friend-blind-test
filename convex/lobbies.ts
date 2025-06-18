@@ -6,7 +6,7 @@ import {
   query,
 } from "./_generated/server";
 import { getOrThrow, getPlayers, getTrack, GenericCtx } from "./utils";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 
 const TIME_BETWEEN_SONGS = 5_000;
@@ -111,12 +111,20 @@ export const join = mutation({
       throw new Error("Game is full");
     }
 
-    return await ctx.db.insert("players", {
+    const playerId = await ctx.db.insert("players", {
       lobbyId,
       name: name ?? "random",
       score: 0,
       ready: false,
+      online: true,
     });
+
+    ctx.scheduler.runAfter(0, api.presence.updatePresence, {
+      playerId,
+      online: true,
+    });
+
+    return playerId;
   },
 });
 
@@ -256,6 +264,9 @@ export const endGame = internalMutation({
 
 // I prefer to generate answers upfront between rounds, rather than checking/creating
 // during the round
+// HOWEVER, if someone joins in the middle of a round, answers won't be created
+// for them. It will have to be handled in the join endpoint. OR, we shift to
+// inserting an answer record right before answering.
 export const generateAnswers = internalMutation({
   args: { lobbyId: v.id("lobbies"), trackId: v.id("tracks") },
   async handler(ctx, { lobbyId, trackId }) {
@@ -271,3 +282,12 @@ export const generateAnswers = internalMutation({
     );
   },
 });
+
+// like
+// function getOrCreateAnswer(playerId, trackId) {
+//   const answer = ctx.db.query("answers"); //...
+//   if (answer === null) {
+//     return ctx.db.insert("answers"); //...
+//   }
+//   return answer;
+// }

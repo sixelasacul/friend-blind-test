@@ -16,6 +16,7 @@ import type {
 import type * as answers from "../answers.js";
 import type * as lobbies from "../lobbies.js";
 import type * as players from "../players.js";
+import type * as presence from "../presence.js";
 import type * as spotify from "../spotify.js";
 import type * as utils from "../utils.js";
 
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   answers: typeof answers;
   lobbies: typeof lobbies;
   players: typeof players;
+  presence: typeof presence;
   spotify: typeof spotify;
   utils: typeof utils;
 }>;
