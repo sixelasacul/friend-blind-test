@@ -24,28 +24,28 @@ function getTrackHistory(ctx: GenericCtx, lobbyId: Id<"lobbies">) {
   );
 }
 
+type PlayerWithAnswer = Doc<"players"> &
+  Pick<
+    Doc<"answers">,
+    "hadCorrectArtistsAt" | "hadCorrectPlayerAt" | "hadCorrectTrackNameAt"
+  >;
+
 function getAllPlayerAnswers(
   ctx: GenericCtx,
   players: Doc<"players">[],
   trackId?: Id<"tracks">
-) {
-  if (!trackId) return [];
+): Promise<PlayerWithAnswer>[] {
   return players.map(async (player) => {
-    const answer = await ctx.db
-      .query("answers")
-      .withIndex("by_player_and_track", (q) =>
-        q.eq("playerId", player._id).eq("trackId", trackId)
-      )
-      .order("desc")
-      .unique();
-
-    if (!answer)
-      throw new Error(
-        `Could not find answer for player ${player._id} on track ${trackId}`
-      );
+    if (!trackId) return player;
 
     const { hadCorrectTrackNameAt, hadCorrectArtistsAt, hadCorrectPlayerAt } =
-      answer;
+      (await ctx.db
+        .query("answers")
+        .withIndex("by_player_and_track", (q) =>
+          q.eq("playerId", player._id).eq("trackId", trackId)
+        )
+        .order("desc")
+        .unique()) ?? {};
 
     return {
       ...player,
@@ -76,7 +76,11 @@ export const getGameInfo = query({
     );
 
     const previousTracks = allTracks
-      .filter((track) => track.order < (currentGameTrack?.order ?? 0))
+      .filter(
+        (track) =>
+          game.status === "finished" ||
+          track.order < (currentGameTrack?.order ?? 0)
+      )
       .map((track) => ({
         ...track,
         player: players.find((player) => player._id === track.playerId)!.name,
@@ -128,6 +132,31 @@ export const join = mutation({
   },
 });
 
+export const prepareLobbyForStartIfPossible = internalMutation({
+  args: { lobbyId: v.id("lobbies") },
+  async handler(ctx, { lobbyId }) {
+    const players = await getPlayers(ctx, lobbyId);
+    const onlinePlayers = players.filter((player) => player.online);
+
+    if (onlinePlayers.length < 2 || !onlinePlayers.every((p) => p.ready))
+      return;
+
+    const offlinePlayers = players.filter((player) => !player.online);
+
+    await Promise.all([
+      await ctx.db.patch(lobbyId, {
+        status: "paused",
+      }),
+      ...offlinePlayers.map((player) => ctx.db.delete(player._id)),
+    ]);
+
+    // I want this to run immediately, even though the game may start later
+    await ctx.scheduler.runAfter(0, internal.spotify.fetchSongs, {
+      lobbyId: lobbyId,
+    });
+  },
+});
+
 export const getGameArtists = internalQuery({
   args: { lobbyId: v.id("lobbies") },
   async handler(ctx, { lobbyId }) {
@@ -169,11 +198,6 @@ export const addSongs = internalMutation({
     ctx.scheduler.runAfter(TIME_BETWEEN_SONGS, internal.lobbies.startGame, {
       lobbyId,
       firstTrackId,
-    });
-
-    ctx.runMutation(internal.lobbies.generateAnswers, {
-      lobbyId,
-      trackId: firstTrackId,
     });
   },
 });
@@ -227,11 +251,6 @@ export const prepareNextSong = internalMutation({
       lobbyId,
       nextSongId: nextSong._id,
     });
-
-    ctx.runMutation(internal.lobbies.generateAnswers, {
-      lobbyId,
-      trackId: nextSong._id,
-    });
   },
 });
 
@@ -261,33 +280,3 @@ export const endGame = internalMutation({
     });
   },
 });
-
-// I prefer to generate answers upfront between rounds, rather than checking/creating
-// during the round
-// HOWEVER, if someone joins in the middle of a round, answers won't be created
-// for them. It will have to be handled in the join endpoint. OR, we shift to
-// inserting an answer record right before answering.
-export const generateAnswers = internalMutation({
-  args: { lobbyId: v.id("lobbies"), trackId: v.id("tracks") },
-  async handler(ctx, { lobbyId, trackId }) {
-    const players = await getPlayers(ctx, lobbyId);
-    await Promise.all(
-      players.map((player) =>
-        ctx.db.insert("answers", {
-          playerId: player._id,
-          trackId: trackId,
-          partialAnswer: "",
-        })
-      )
-    );
-  },
-});
-
-// like
-// function getOrCreateAnswer(playerId, trackId) {
-//   const answer = ctx.db.query("answers"); //...
-//   if (answer === null) {
-//     return ctx.db.insert("answers"); //...
-//   }
-//   return answer;
-// }

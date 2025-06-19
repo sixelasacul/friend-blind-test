@@ -82,9 +82,9 @@ export const Route = createFileRoute("/$lobbyId")({
 
 // should show player name + edit
 function RouteComponent() {
+  usePresence();
   const { playerId, lobbyId } = Route.useRouteContext();
 
-  usePresence(playerId);
   const playerInfo = useQuery(api.players.getPlayerInfo, { playerId });
 
   const [name, setName] = useState("");

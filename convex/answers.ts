@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { distance } from "fastest-levenshtein";
 import { mutation, query } from "./_generated/server";
-import { getAnswerContext, getOrThrow } from "./utils";
+import { prepareAnswerContext, getOrThrow } from "./utils";
 
 // maximum distance to count as correct, based on levenshtein distance
 // 1 means 1 character difference
@@ -107,7 +107,7 @@ export const guessTrackNameAndArtists = mutation({
   },
   async handler(ctx, { playerId, lobbyId, answerText }) {
     const timestamp = Date.now();
-    const { answer, currentTrack, player } = await getAnswerContext(
+    const { answer, currentTrack, player } = await prepareAnswerContext(
       ctx,
       playerId,
       lobbyId
@@ -160,7 +160,7 @@ export const guessPlayer = mutation({
   },
   async handler(ctx, { playerId, lobbyId, guessedPlayerId }) {
     const timestamp = Date.now();
-    const { answer, currentTrack, player } = await getAnswerContext(
+    const { answer, currentTrack, player } = await prepareAnswerContext(
       ctx,
       playerId,
       lobbyId

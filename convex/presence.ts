@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const TIMEOUT = 20_000;
 
@@ -33,5 +33,10 @@ export const updatePresence = mutation({
     }
 
     await ctx.db.patch(playerId, { online, timeoutFn: undefined });
+
+    // if everyone online is ready and someone left, we want to start the game
+    ctx.scheduler.runAfter(0, internal.lobbies.prepareLobbyForStartIfPossible, {
+      lobbyId: player.lobbyId,
+    });
   },
 });
