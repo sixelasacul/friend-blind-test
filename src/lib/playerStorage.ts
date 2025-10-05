@@ -38,10 +38,8 @@ export function setPlayerName(name: string) {
 }
 
 type PlayerArtist = {
-  spotifyId: string;
+  externalId: string;
   name: string;
-  genres: string[];
-  years: number[];
 };
 
 export function getPlayerArtists() {

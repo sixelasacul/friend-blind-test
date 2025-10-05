@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useEffect, useState } from "react";
-import type { Artist } from "@spotify/web-api-ts-sdk";
 import { setPlayerArtists } from "../../lib/playerStorage";
 import { useDebounce } from "../../lib/useDebounce";
 import { useGameInfo } from "../../hooks/useGameInfo";
@@ -31,7 +30,8 @@ function RouteComponent() {
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const searchArtist = useAction(api.spotify.searchArtist);
+  const searchArtist = useAction(api.artists.search);
+  type Artist = Awaited<ReturnType<typeof searchArtist>>[number];
   const [results, setResults] = useState<Artist[]>([]);
 
   const saveArtist = useMutation(api.players.saveArtist);
@@ -50,20 +50,18 @@ function RouteComponent() {
     if (playerInfo) {
       setPlayerArtists(
         playerInfo.artists.map((artist) => {
-          const { genres, name, spotifyId, years } = artist;
+          const { name, externalId } = artist;
           return {
-            genres,
             name,
-            spotifyId,
-            years,
+            externalId,
           };
         })
       );
     }
   }, [playerInfo]);
 
-  async function saveArtistAndReset({ id, name, genres }: Artist) {
-    await saveArtist({ playerId, artist: { spotifyId: id, name, genres } });
+  async function saveArtistAndReset({ mbid, name }: Artist) {
+    await saveArtist({ playerId, artist: { externalId: mbid, name } });
     setResults([]);
     setSearch("");
   }
@@ -77,7 +75,7 @@ function RouteComponent() {
         <ul>
           {playerInfo.artists.map((artist) => (
             <li key={artist._id}>
-              {artist.name}, {artist.genres.join(", ")} ({artist.years})
+              {artist.name}
               <button onClick={() => removeArtist({ artistId: artist._id })}>
                 X
               </button>
@@ -93,11 +91,12 @@ function RouteComponent() {
           disabled={(playerInfo?.artists.length ?? 0) >= 5}
         />
       </label>
+      {/* display image to disambiguate */}
       <ul>
         {results.map((result) => (
-          <li key={result.id}>
+          <li key={result.mbid}>
             <button onClick={() => saveArtistAndReset(result)}>
-              {result.name}, {result.genres.join(", ")}
+              {result.name}
             </button>
           </li>
         ))}

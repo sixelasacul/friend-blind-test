@@ -3,8 +3,7 @@ import { v } from "convex/values";
 
 // future notes:
 // - allow to log in with spotify
-// - instead of artists first, a player pick from 5 genres each turn
-//   - competitive??
+// - competitive??
 
 export default defineSchema({
   lobbies: defineTable({
@@ -43,17 +42,16 @@ export default defineSchema({
 
   artists: defineTable({
     playerId: v.id("players"),
-    spotifyId: v.string(),
+    externalId: v.string(),
     // may want to remove these in the future if they aren't needed anymore
     name: v.string(),
-    genres: v.array(v.string()),
-    years: v.array(v.number()),
   }).index("by_player", ["playerId"]),
 
   tracks: defineTable({
     lobbyId: v.id("lobbies"),
     playerId: v.id("players"),
     name: v.string(),
+    /** May change to only the main artist */
     artists: v.array(v.string()),
     previewUrl: v.string(),
     order: v.number(),

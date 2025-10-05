@@ -151,7 +151,7 @@ export const prepareLobbyForStartIfPossible = internalMutation({
     ]);
 
     // I want this to run immediately, even though the game may start later
-    await ctx.scheduler.runAfter(0, internal.spotify.fetchSongs, {
+    await ctx.scheduler.runAfter(0, internal.tracks.generateLobbyTracks, {
       lobbyId: lobbyId,
     });
   },

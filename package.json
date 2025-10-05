@@ -20,6 +20,7 @@
     "convex": "^1.24.8",
     "convex-helpers": "^0.1.92",
     "fastest-levenshtein": "^1.0.16",
+    "ofetch": "^1.4.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwindcss": "^4.1.8",

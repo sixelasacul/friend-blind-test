@@ -14,10 +14,14 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as answers from "../answers.js";
+import type * as artists from "../artists.js";
+import type * as lastFm from "../lastFm.js";
+import type * as lastFmApi from "../lastFmApi.js";
 import type * as lobbies from "../lobbies.js";
 import type * as players from "../players.js";
 import type * as presence from "../presence.js";
 import type * as spotify from "../spotify.js";
+import type * as tracks from "../tracks.js";
 import type * as utils from "../utils.js";
 
 /**
@@ -30,10 +34,14 @@ import type * as utils from "../utils.js";
  */
 declare const fullApi: ApiFromModules<{
   answers: typeof answers;
+  artists: typeof artists;
+  lastFm: typeof lastFm;
+  lastFmApi: typeof lastFmApi;
   lobbies: typeof lobbies;
   players: typeof players;
   presence: typeof presence;
   spotify: typeof spotify;
+  tracks: typeof tracks;
   utils: typeof utils;
 }>;
 export declare const api: FilterApi<

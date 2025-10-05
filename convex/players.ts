@@ -68,10 +68,8 @@ export const updateName = mutation({
 });
 
 const artistSchema = v.object({
-  spotifyId: v.string(),
+  externalId: v.string(),
   name: v.string(),
-  genres: v.array(v.string()),
-  years: v.optional(v.array(v.number())),
 });
 
 export const saveArtist = mutation({
@@ -80,7 +78,7 @@ export const saveArtist = mutation({
     artist: artistSchema,
   },
   async handler(ctx, { playerId, artist }) {
-    const { spotifyId, name, genres, years } = artist;
+    const { externalId, name } = artist;
     // should re-validate via spotify? That'd be more calls but safer
     // anyway, the selected artists should be persisted either client side
     // or server side to be re-used across games (prob client side)
@@ -94,22 +92,11 @@ export const saveArtist = mutation({
       return;
     }
 
-    const areYearsValid = years?.length === 2;
-
     const artistId = await ctx.db.insert("artists", {
       playerId,
-      spotifyId,
+      externalId,
       name,
-      genres,
-      years: areYearsValid ? years : [],
     });
-
-    if (!areYearsValid) {
-      ctx.scheduler.runAfter(0, internal.spotify.getArtistYear, {
-        spotifyArtistId: spotifyId,
-        artistId,
-      });
-    }
 
     return artistId;
   },
@@ -126,16 +113,6 @@ export const saveArtists = mutation({
         ctx.runMutation(api.players.saveArtist, { playerId, artist })
       )
     );
-  },
-});
-
-export const updateArtistYears = internalMutation({
-  args: {
-    artistId: v.id("artists"),
-    years: v.array(v.number()),
-  },
-  async handler(ctx, { artistId, years }) {
-    return await ctx.db.patch(artistId, { years });
   },
 });
 

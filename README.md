@@ -32,3 +32,12 @@ The search endpoint allow for some filters, but it's very flacky:
 - A year filter can be used to get results from that year (track, album, artist). A range can also be passed instead, which works on tracks, but not on albums nor artists.
 - A genre filter can be used as well, but the results aren't always accurate. For example, when searching for `genre:"french rap new wave"` or `genre:"french rap" genre:"new wave"`, it doesn't return any artist, even though there are artists with these genres. Though, when I search for `genre:"classic rock psychedelic rock"`, I do get correct results.
 - When not using a filter, it does return result that were not returned before, but the accuracy is still flawed. For example, when searing for `french rap new wave`, it does return artists with the genre `french rap`, but they may not have `new wave`. Also, it may return artist with `french` or `rap` in their name, but no genre related to the search.
+
+## TODO
+
+- [ ] Scoring
+  - Less points for songs related to a user's genre
+  - Points by speed
+- [ ] Include genres unrelated to users' choices
+- [ ] Min 1 artist
+- [ ] Difficulty settings (changes popularity threshold)
