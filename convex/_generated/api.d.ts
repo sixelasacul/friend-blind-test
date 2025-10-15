@@ -20,6 +20,7 @@ import type * as lastFmApi from "../lastFmApi.js";
 import type * as lobbies from "../lobbies.js";
 import type * as players from "../players.js";
 import type * as presence from "../presence.js";
+import type * as score from "../score.js";
 import type * as spotify from "../spotify.js";
 import type * as tracks from "../tracks.js";
 import type * as utils from "../utils.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   lobbies: typeof lobbies;
   players: typeof players;
   presence: typeof presence;
+  score: typeof score;
   spotify: typeof spotify;
   tracks: typeof tracks;
   utils: typeof utils;

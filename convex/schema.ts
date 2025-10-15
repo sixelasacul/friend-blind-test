@@ -35,7 +35,6 @@ export default defineSchema({
     lobbyId: v.id("lobbies"),
     name: v.string(),
     ready: v.boolean(),
-    score: v.number(),
     online: v.boolean(),
     timeoutFn: v.optional(v.id("_scheduled_functions")),
   }).index("by_lobby", ["lobbyId"]),
@@ -58,6 +57,7 @@ export default defineSchema({
   }).index("by_lobby_and_order", ["lobbyId", "order"]),
 
   answers: defineTable({
+    lobbyId: v.id("lobbies"),
     playerId: v.id("players"),
     trackId: v.id("tracks"),
     // we'd only save part of the answers that are correct and discard the rest
@@ -65,8 +65,10 @@ export default defineSchema({
     // can make only one guess
     guessedPlayerId: v.optional(v.id("players")),
     // if set, player guessed correctly
-    hadCorrectArtistsAt: v.optional(v.number()),
-    hadCorrectTrackNameAt: v.optional(v.number()),
-    hadCorrectPlayerAt: v.optional(v.number()),
-  }).index("by_player_and_track", ["playerId", "trackId"]),
+    guessedArtistsAt: v.optional(v.number()),
+    guessedTrackNameAt: v.optional(v.number()),
+    guessedPlayerAt: v.optional(v.number()),
+  })
+    .index("by_player_and_track", ["playerId", "trackId"])
+    .index("by_lobby", ["lobbyId"]),
 });

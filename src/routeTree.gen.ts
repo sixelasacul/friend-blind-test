@@ -8,106 +8,38 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as LobbyIdRouteRouteImport } from './routes/$lobbyId/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as LobbyIdWaitingRouteImport } from './routes/$lobbyId/waiting'
+import { Route as LobbyIdPlayingRouteImport } from './routes/$lobbyId/playing'
+import { Route as LobbyIdFinishedRouteImport } from './routes/$lobbyId/finished'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as LobbyIdRouteImport } from './routes/$lobbyId/route'
-import { Route as IndexImport } from './routes/index'
-import { Route as LobbyIdWaitingImport } from './routes/$lobbyId/waiting'
-import { Route as LobbyIdPlayingImport } from './routes/$lobbyId/playing'
-import { Route as LobbyIdFinishedImport } from './routes/$lobbyId/finished'
-
-// Create/Update Routes
-
-const LobbyIdRouteRoute = LobbyIdRouteImport.update({
+const LobbyIdRouteRoute = LobbyIdRouteRouteImport.update({
   id: '/$lobbyId',
   path: '/$lobbyId',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const LobbyIdWaitingRoute = LobbyIdWaitingImport.update({
+const LobbyIdWaitingRoute = LobbyIdWaitingRouteImport.update({
   id: '/waiting',
   path: '/waiting',
   getParentRoute: () => LobbyIdRouteRoute,
 } as any)
-
-const LobbyIdPlayingRoute = LobbyIdPlayingImport.update({
+const LobbyIdPlayingRoute = LobbyIdPlayingRouteImport.update({
   id: '/playing',
   path: '/playing',
   getParentRoute: () => LobbyIdRouteRoute,
 } as any)
-
-const LobbyIdFinishedRoute = LobbyIdFinishedImport.update({
+const LobbyIdFinishedRoute = LobbyIdFinishedRouteImport.update({
   id: '/finished',
   path: '/finished',
   getParentRoute: () => LobbyIdRouteRoute,
 } as any)
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/$lobbyId': {
-      id: '/$lobbyId'
-      path: '/$lobbyId'
-      fullPath: '/$lobbyId'
-      preLoaderRoute: typeof LobbyIdRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/$lobbyId/finished': {
-      id: '/$lobbyId/finished'
-      path: '/finished'
-      fullPath: '/$lobbyId/finished'
-      preLoaderRoute: typeof LobbyIdFinishedImport
-      parentRoute: typeof LobbyIdRouteImport
-    }
-    '/$lobbyId/playing': {
-      id: '/$lobbyId/playing'
-      path: '/playing'
-      fullPath: '/$lobbyId/playing'
-      preLoaderRoute: typeof LobbyIdPlayingImport
-      parentRoute: typeof LobbyIdRouteImport
-    }
-    '/$lobbyId/waiting': {
-      id: '/$lobbyId/waiting'
-      path: '/waiting'
-      fullPath: '/$lobbyId/waiting'
-      preLoaderRoute: typeof LobbyIdWaitingImport
-      parentRoute: typeof LobbyIdRouteImport
-    }
-  }
-}
-
-// Create and export the route tree
-
-interface LobbyIdRouteRouteChildren {
-  LobbyIdFinishedRoute: typeof LobbyIdFinishedRoute
-  LobbyIdPlayingRoute: typeof LobbyIdPlayingRoute
-  LobbyIdWaitingRoute: typeof LobbyIdWaitingRoute
-}
-
-const LobbyIdRouteRouteChildren: LobbyIdRouteRouteChildren = {
-  LobbyIdFinishedRoute: LobbyIdFinishedRoute,
-  LobbyIdPlayingRoute: LobbyIdPlayingRoute,
-  LobbyIdWaitingRoute: LobbyIdWaitingRoute,
-}
-
-const LobbyIdRouteRouteWithChildren = LobbyIdRouteRoute._addFileChildren(
-  LobbyIdRouteRouteChildren,
-)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,7 +48,6 @@ export interface FileRoutesByFullPath {
   '/$lobbyId/playing': typeof LobbyIdPlayingRoute
   '/$lobbyId/waiting': typeof LobbyIdWaitingRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$lobbyId': typeof LobbyIdRouteRouteWithChildren
@@ -124,16 +55,14 @@ export interface FileRoutesByTo {
   '/$lobbyId/playing': typeof LobbyIdPlayingRoute
   '/$lobbyId/waiting': typeof LobbyIdWaitingRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$lobbyId': typeof LobbyIdRouteRouteWithChildren
   '/$lobbyId/finished': typeof LobbyIdFinishedRoute
   '/$lobbyId/playing': typeof LobbyIdPlayingRoute
   '/$lobbyId/waiting': typeof LobbyIdWaitingRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
@@ -158,54 +87,71 @@ export interface FileRouteTypes {
     | '/$lobbyId/waiting'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LobbyIdRouteRoute: typeof LobbyIdRouteRouteWithChildren
 }
 
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/$lobbyId': {
+      id: '/$lobbyId'
+      path: '/$lobbyId'
+      fullPath: '/$lobbyId'
+      preLoaderRoute: typeof LobbyIdRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$lobbyId/waiting': {
+      id: '/$lobbyId/waiting'
+      path: '/waiting'
+      fullPath: '/$lobbyId/waiting'
+      preLoaderRoute: typeof LobbyIdWaitingRouteImport
+      parentRoute: typeof LobbyIdRouteRoute
+    }
+    '/$lobbyId/playing': {
+      id: '/$lobbyId/playing'
+      path: '/playing'
+      fullPath: '/$lobbyId/playing'
+      preLoaderRoute: typeof LobbyIdPlayingRouteImport
+      parentRoute: typeof LobbyIdRouteRoute
+    }
+    '/$lobbyId/finished': {
+      id: '/$lobbyId/finished'
+      path: '/finished'
+      fullPath: '/$lobbyId/finished'
+      preLoaderRoute: typeof LobbyIdFinishedRouteImport
+      parentRoute: typeof LobbyIdRouteRoute
+    }
+  }
+}
+
+interface LobbyIdRouteRouteChildren {
+  LobbyIdFinishedRoute: typeof LobbyIdFinishedRoute
+  LobbyIdPlayingRoute: typeof LobbyIdPlayingRoute
+  LobbyIdWaitingRoute: typeof LobbyIdWaitingRoute
+}
+
+const LobbyIdRouteRouteChildren: LobbyIdRouteRouteChildren = {
+  LobbyIdFinishedRoute: LobbyIdFinishedRoute,
+  LobbyIdPlayingRoute: LobbyIdPlayingRoute,
+  LobbyIdWaitingRoute: LobbyIdWaitingRoute,
+}
+
+const LobbyIdRouteRouteWithChildren = LobbyIdRouteRoute._addFileChildren(
+  LobbyIdRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LobbyIdRouteRoute: LobbyIdRouteRouteWithChildren,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/$lobbyId"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/$lobbyId": {
-      "filePath": "$lobbyId/route.tsx",
-      "children": [
-        "/$lobbyId/finished",
-        "/$lobbyId/playing",
-        "/$lobbyId/waiting"
-      ]
-    },
-    "/$lobbyId/finished": {
-      "filePath": "$lobbyId/finished.tsx",
-      "parent": "/$lobbyId"
-    },
-    "/$lobbyId/playing": {
-      "filePath": "$lobbyId/playing.tsx",
-      "parent": "/$lobbyId"
-    },
-    "/$lobbyId/waiting": {
-      "filePath": "$lobbyId/waiting.tsx",
-      "parent": "/$lobbyId"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

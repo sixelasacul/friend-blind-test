@@ -24,6 +24,10 @@ type WithImage = {
   image: Image[];
 };
 
+type WithListeners = {
+  listeners: number;
+};
+
 // TODO: perhaps rewrite the LastFm response to have more consistent structure?
 // - no resulsts on Search artists
 // - artist plural
@@ -37,7 +41,7 @@ type SimilarArtists = {
 type SearchArtists = {
   results: {
     artistmatches: {
-      artist: (Artist & WithImage)[];
+      artist: (Artist & WithImage & WithListeners)[];
     };
   };
 };
@@ -62,6 +66,18 @@ class LastFmBaseApi {
 }
 
 class LastFmArtistApi extends LastFmBaseApi {
+  private static LISTENERS_THRESHOLD = 1_000;
+
+  private static filterByListeners(artist: WithListeners) {
+    return artist.listeners >= LastFmArtistApi.LISTENERS_THRESHOLD;
+  }
+  private static sortByListeners(
+    firstArtist: WithListeners,
+    secondArtist: WithListeners
+  ) {
+    return secondArtist.listeners - firstArtist.listeners;
+  }
+
   async getSimilar(artist: string, limit = 10) {
     const { similarartists } = await this.fetch<SimilarArtists>("", {
       params: {
@@ -81,11 +97,16 @@ class LastFmArtistApi extends LastFmBaseApi {
         method: "artist.search",
         format: "json",
         artist,
-        limit,
+        // we retrieve more in case we have to filter out some results
+        limit: limit * 2,
       },
     });
 
-    return results.artistmatches.artist;
+    const filteredArtists = results.artistmatches.artist.filter(
+      LastFmArtistApi.filterByListeners
+    );
+
+    return filteredArtists.slice(0, limit);
   }
 
   async getTopTracks(artist: string, limit = 10) {
@@ -101,6 +122,13 @@ class LastFmArtistApi extends LastFmBaseApi {
     return toptracks.track;
   }
 }
+
+// TODO: Look more info MusicBrainz, which seems to be used by LastFM for their database:
+// https://beta.musicbrainz.org/doc/MusicBrainz_API
+// Could use the genre database from there
+// Could even download their database to use it directly within convex and save
+// some API calls (but can't find the size (6GB)).
+// though I don't think I'll have the similar artists.
 
 export class LastFmApi {
   public artist: LastFmArtistApi;

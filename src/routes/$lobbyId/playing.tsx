@@ -42,13 +42,12 @@ function RouteComponent() {
     return <p>Loading</p>;
   }
 
-  const { currentGameTrackUrl, previousTracks, players } = gameInfo;
-  const { hadCorrectTrackNameAt, hadCorrectArtistsAt, hadCorrectPlayerAt } =
-    answer;
+  const { currentGameTrack, previousTracks, players } = gameInfo;
+  const { guessedArtistsAt, guessedPlayerAt, guessedTrackNameAt } = answer;
 
   return (
     <>
-      <audio ref={audioRef} src={currentGameTrackUrl} />
+      <audio ref={audioRef} src={currentGameTrack.previewUrl} />
       {/* would be nice to have this in the waiting route without duplication
       (putting it in the layout, but that means I don't have access to the audio
       element, so should I move it up too??)
@@ -74,9 +73,9 @@ function RouteComponent() {
         <button type="submit">Guess</button>
       </form>
 
-      {hadCorrectTrackNameAt && <p>Guess track name</p>}
-      {hadCorrectArtistsAt && <p>Guess artists</p>}
-      {hadCorrectPlayerAt && <p>Guess player</p>}
+      {!!guessedTrackNameAt && <p>Guessed track name</p>}
+      {!!guessedArtistsAt && <p>Guessed artists</p>}
+      {!!guessedPlayerAt && <p>Guessed player</p>}
 
       <ul>
         {players.map((player) => (
@@ -90,9 +89,9 @@ function RouteComponent() {
             </button>
             <p>
               <span>{player.name}</span> (<span>{player.score}</span>)
-              {player.hadCorrectTrackNameAt && <span>Guess track name</span>}
-              {player.hadCorrectArtistsAt && <span>Guess artists</span>}
-              {player.hadCorrectPlayerAt && <span>Guess player</span>}
+              {player.hadCorrectTrackNameAt && <span>Guessed track name</span>}
+              {player.hadCorrectArtistsAt && <span>Guessed artists</span>}
+              {player.hadCorrectPlayerAt && <span>Guessed player</span>}
             </p>
           </li>
         ))}

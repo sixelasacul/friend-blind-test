@@ -5,9 +5,17 @@ import {
   mutation,
   query,
 } from "./_generated/server";
-import { getOrThrow, getPlayers, getTrack, GenericCtx } from "./utils";
+import {
+  getOrThrow,
+  getPlayers,
+  getTrack,
+  GenericCtx,
+  getLobbyAnswers,
+  preparePlayersWithScore,
+  prepareTracksWithPlayerAnswers,
+} from "./utils";
 import { api, internal } from "./_generated/api";
-import { Doc, Id } from "./_generated/dataModel";
+import { Id } from "./_generated/dataModel";
 
 const TIME_BETWEEN_SONGS = 5_000;
 const PREVIEW_SONG_DURATION = 30_000;
@@ -24,72 +32,56 @@ function getTrackHistory(ctx: GenericCtx, lobbyId: Id<"lobbies">) {
   );
 }
 
-type PlayerWithAnswer = Doc<"players"> &
-  Pick<
-    Doc<"answers">,
-    "hadCorrectArtistsAt" | "hadCorrectPlayerAt" | "hadCorrectTrackNameAt"
-  >;
-
-function getAllPlayerAnswers(
-  ctx: GenericCtx,
-  players: Doc<"players">[],
-  trackId?: Id<"tracks">
-): Promise<PlayerWithAnswer>[] {
-  return players.map(async (player) => {
-    if (!trackId) return player;
-
-    const { hadCorrectTrackNameAt, hadCorrectArtistsAt, hadCorrectPlayerAt } =
-      (await ctx.db
-        .query("answers")
-        .withIndex("by_player_and_track", (q) =>
-          q.eq("playerId", player._id).eq("trackId", trackId)
-        )
-        .order("desc")
-        .unique()) ?? {};
-
-    return {
-      ...player,
-      hadCorrectTrackNameAt,
-      hadCorrectArtistsAt,
-      hadCorrectPlayerAt,
-    };
-  });
-}
-
 export const getGameInfo = query({
   args: { lobbyId: v.id("lobbies") },
   async handler(ctx, { lobbyId }) {
-    const [game, players] = await Promise.all([
+    const [game, players, answers] = await Promise.all([
       getOrThrow(ctx.db.get(lobbyId), "Game not found"),
       getPlayers(ctx, lobbyId),
+      getLobbyAnswers(ctx, lobbyId),
     ]);
 
-    const [currentGameTrack, allTracks, ...playersWithAnswer] =
-      await Promise.all([
-        getTrack(ctx, game),
-        getTrackHistory(ctx, game._id),
-        ...getAllPlayerAnswers(ctx, players, game.currentTrackId),
-      ]);
+    const [currentGameTrack, allTracks] = await Promise.all([
+      getTrack(ctx, game),
+      getTrackHistory(ctx, game._id),
+    ]);
 
-    const sortedPlayers = playersWithAnswer.sort(
-      (first, second) => second.score - first.score
+    // both could be merged in a larger util to prepare all data for the game info
+    // to reuse some structures (*ById)
+    const preparedPlayers = preparePlayersWithScore(
+      players,
+      answers,
+      allTracks
     );
 
-    const previousTracks = allTracks
-      .filter(
-        (track) =>
-          game.status === "finished" ||
-          track.order < (currentGameTrack?.order ?? 0)
-      )
-      .map((track) => ({
-        ...track,
-        player: players.find((player) => player._id === track.playerId)!.name,
-      }));
+    const preparedTracks = prepareTracksWithPlayerAnswers(
+      players,
+      answers,
+      allTracks
+    );
+    // a bit op, will see to do it within preparedTracks
+    const [prepareCurrentGameTrack] = currentGameTrack
+      ? prepareTracksWithPlayerAnswers(players, answers, [currentGameTrack])
+      : [null];
+
+    const previousTracks = preparedTracks.filter(
+      (track) =>
+        game.status === "finished" ||
+        track.order < (currentGameTrack?.order ?? 0)
+    );
+
+    const { _id, previewUrl, playerAnswers } = prepareCurrentGameTrack ?? {};
 
     return {
       game,
-      players: sortedPlayers,
-      currentGameTrackUrl: currentGameTrack?.previewUrl,
+      players: preparedPlayers,
+      // obfuscated to not reveal answers in network
+      currentGameTrack: {
+        _id,
+        previewUrl,
+        // should be in players I think, it would be easier to use on frontend
+        playerAnswers,
+      },
       previousTracks,
     };
   },
@@ -110,15 +102,15 @@ export const join = mutation({
   async handler(ctx, { lobbyId, name }) {
     const players = await getPlayers(ctx, lobbyId);
 
-    // that's arbitrary
+    // that's arbitrary, but could be a lobby setting?
     if (players.length >= 12) {
       throw new Error("Game is full");
     }
 
     const playerId = await ctx.db.insert("players", {
       lobbyId,
+      // use package `unique-names-generator`
       name: name ?? "random",
-      score: 0,
       ready: false,
       online: true,
     });

@@ -9,12 +9,6 @@ const CORRECT_TERM_THRESHOLD = 1;
 // maximum percentage of correct terms needed for an answer
 const CORRECT_OVERALL_THRESHOLD = 0.8;
 
-const SCORING = {
-  PLAYER: 5,
-  TRACK: 5,
-  ARTISTS: 5,
-};
-
 function prepare(str: string) {
   return str
     .toLowerCase()
@@ -74,27 +68,16 @@ function checkAnswer(
     trackScore += trackMatch ? 1 : 0;
   }
 
-  const hasCorrectTrack =
+  const guessedTrack =
     trackScore / preparedTrack.length >= CORRECT_OVERALL_THRESHOLD;
-  const hasCorrectArtists =
+  const guessedArtists =
     artistScore / preparedArtists.length >= CORRECT_OVERALL_THRESHOLD;
 
   return {
     partialAnswer: [...correctTermsFromAnswer].join(" "),
-    hasCorrectTrack,
-    hasCorrectArtists,
+    guessedTrack,
+    guessedArtists,
   };
-}
-
-function getNewScore(
-  currentScore: number,
-  hasCorrectTrack: boolean,
-  hasCorrectArtists: boolean
-) {
-  let newScore = currentScore;
-  if (hasCorrectTrack) newScore += SCORING.TRACK;
-  if (hasCorrectArtists) newScore += SCORING.ARTISTS;
-  return newScore;
 }
 
 // Note: Take word length in account to validate correctness of the answer
@@ -106,8 +89,7 @@ export const guessTrackNameAndArtists = mutation({
     answerText: v.string(),
   },
   async handler(ctx, { playerId, lobbyId, answerText }) {
-    const timestamp = Date.now();
-    const { answer, currentTrack, player } = await prepareAnswerContext(
+    const { answer, currentTrack } = await prepareAnswerContext(
       ctx,
       playerId,
       lobbyId
@@ -115,39 +97,32 @@ export const guessTrackNameAndArtists = mutation({
 
     const {
       _id,
-      hadCorrectTrackNameAt,
-      hadCorrectArtistsAt,
+      guessedTrackNameAt,
+      guessedArtistsAt,
       partialAnswer: prevPartialAnswer,
     } = answer;
 
-    if (hadCorrectArtistsAt && hadCorrectTrackNameAt)
+    if (guessedArtistsAt && guessedTrackNameAt)
       throw new Error("Answer already found");
 
-    const { hasCorrectArtists, hasCorrectTrack, partialAnswer } = checkAnswer(
+    const { guessedArtists, guessedTrack, partialAnswer } = checkAnswer(
       answerText,
       prevPartialAnswer,
       currentTrack.name,
       currentTrack.artists
     );
 
-    const shouldUpdateScore =
-      (hasCorrectTrack && !hadCorrectTrackNameAt) ||
-      (hasCorrectArtists && !hadCorrectArtistsAt);
-    const newHadCorrectTrackNameAt =
-      hadCorrectTrackNameAt || (hasCorrectTrack ? timestamp : undefined);
-    const newHadCorrectArtistsAt =
-      hadCorrectArtistsAt || (hasCorrectArtists ? timestamp : undefined);
+    const timestamp = Date.now();
 
     await Promise.all([
       ctx.db.patch(_id, {
-        hadCorrectTrackNameAt: newHadCorrectTrackNameAt,
-        hadCorrectArtistsAt: newHadCorrectArtistsAt,
+        // we update the timestamps only if it wasn't guessed before
+        guessedTrackNameAt:
+          guessedTrackNameAt ?? (guessedTrack ? timestamp : undefined),
+        guessedArtistsAt:
+          guessedArtistsAt ?? (guessedArtists ? timestamp : undefined),
         partialAnswer,
       }),
-      shouldUpdateScore &&
-        ctx.db.patch(playerId, {
-          score: getNewScore(player.score, hasCorrectTrack, hasCorrectArtists),
-        }),
     ]);
   },
 });
@@ -160,7 +135,7 @@ export const guessPlayer = mutation({
   },
   async handler(ctx, { playerId, lobbyId, guessedPlayerId }) {
     const timestamp = Date.now();
-    const { answer, currentTrack, player } = await prepareAnswerContext(
+    const { answer, currentTrack } = await prepareAnswerContext(
       ctx,
       playerId,
       lobbyId
@@ -172,16 +147,11 @@ export const guessPlayer = mutation({
 
     const hasCorrectPlayer = guessedPlayerId === currentTrack.playerId;
 
-    if (hasCorrectPlayer && !answer.hadCorrectPlayerAt) {
+    if (hasCorrectPlayer && !answer.guessedPlayerAt) {
       await Promise.all([
         ctx.db.patch(answer._id, {
           guessedPlayerId,
-          hadCorrectPlayerAt: hasCorrectPlayer ? timestamp : undefined,
-        }),
-        // perhaps instead of having the score persisted, it can be computed from
-        // answers. That way, it may be easier to adjust points based on speed
-        ctx.db.patch(playerId, {
-          score: player.score + SCORING.PLAYER,
+          guessedPlayerAt: hasCorrectPlayer ? timestamp : undefined,
         }),
       ]);
     }
@@ -203,7 +173,7 @@ export const getPlayerAnswer = query({
       return {};
     }
 
-    const { hadCorrectTrackNameAt, hadCorrectArtistsAt, hadCorrectPlayerAt } =
+    const { guessedTrackNameAt, guessedArtistsAt, guessedPlayerAt } =
       (await ctx.db
         .query("answers")
         .withIndex("by_player_and_track", (q) =>
@@ -211,6 +181,6 @@ export const getPlayerAnswer = query({
         )
         .unique()) ?? {};
 
-    return { hadCorrectTrackNameAt, hadCorrectArtistsAt, hadCorrectPlayerAt };
+    return { guessedTrackNameAt, guessedArtistsAt, guessedPlayerAt };
   },
 });
