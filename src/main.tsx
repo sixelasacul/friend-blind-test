@@ -33,6 +33,6 @@ if (!rootElement.innerHTML) {
       <ConvexProvider client={convex}>
         <RouterProvider router={router} />
       </ConvexProvider>
-    </StrictMode>
+    </StrictMode>,
   );
 }

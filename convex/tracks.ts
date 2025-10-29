@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   getPreviewUrl,
+  getTrackPreviewDuration,
   pickRandomIndices,
   randomNumber,
   removeFeaturings,
@@ -18,7 +19,7 @@ async function _generateLobbyTracks(
   lobbyId: Id<"lobbies">,
   gameArtists: Doc<"artists">[][],
   lastFmApi: LastFmApi,
-  spotifyApi: SpotifyApi
+  spotifyApi: SpotifyApi,
 ) {
   // perhaps instead of picking through players, we could first flatten the
   // player artists array, and pick from this. Though, it could lead into
@@ -27,7 +28,7 @@ async function _generateLobbyTracks(
   // to specific player to spice things up
   const pickedPlayerIndices = pickRandomIndices(
     gameArtists.length,
-    SONGS_TO_GENERATE
+    SONGS_TO_GENERATE,
   );
 
   // TODO: Use allSettled (perhaps eslint rule for this?)
@@ -46,40 +47,48 @@ async function _generateLobbyTracks(
       const topTracks = await lastFmApi.artist.getTopTracks(pickedArtist);
       const pickedTrack = topTracks[randomNumber(0, topTracks.length)];
 
+      // NOTE: If we detect non ascii characters in the title (after we sanitize it)
+      // like in the answers, then we skip and get another track
+
+      // Probably fine to not remove them here, but it could be done when
+      // checking answers (+ remove "radio edit", "remix" + remove part, pt)
       const sanitizedTrack = removeFeaturings(pickedTrack.name);
       const results = await spotifyApi.search(
         `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
         ["track"],
         "FR",
-        1
+        1,
       );
       const spotifyTrack = results.tracks.items[0];
-
-      console.log({
-        originalArtist: artist,
-        relatedArtists: relatedArtists.join(", "),
-        pickedTrack: pickedTrack.name,
-        spotifyTrackName: spotifyTrack.name,
-        spotifyTrackArtists: spotifyTrack.artists
-          .map(({ name }) => name)
-          .join(", "),
-      });
+      console.log(
+        `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
+        results.tracks.items,
+      );
+      // LastFM artists associated to tracks and albums are weird, e.g.
+      // Pretty DollCorpse are 3 albums, one with only Ptite Soeur, one with
+      // Ptite Soeur, Neophron, FEMTOGO, but they are grouped as one artist.
+      // Spotify is more accurate for this, so picking from this
+      const artists = spotifyTrack.artists.map(({ name }) => name);
 
       // for now we'll pretend that every track has a preview URL
       // later (and if that's not the case), we can add a while loop
       // to try with a different related song
       // (that can also be used to avoid duplicate songs)
+      // to fix that we should put this into a function and do a recursion on error
       const previewUrl = (await getPreviewUrl(spotifyTrack))!;
+
+      const duration = await getTrackPreviewDuration(previewUrl);
+      console.log({ duration });
 
       return {
         lobbyId,
         playerId: currentPlayerArtists[0].playerId,
         order: index,
         previewUrl,
-        name: removeFeaturings(spotifyTrack.name),
-        artists: spotifyTrack.artists.map(({ name }) => name),
+        name: removeFeaturings(pickedTrack.name),
+        artists: artists,
       };
-    })
+    }),
   );
 
   return tracks;
@@ -103,7 +112,7 @@ export const generateLobbyTracks = internalAction({
       lobbyId,
       artists,
       getLastFmSdk(),
-      getSpotifySdk()
+      getSpotifySdk(),
     );
 
     await ctx.runMutation(internal.lobbies.addSongs, {

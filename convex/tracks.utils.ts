@@ -1,16 +1,29 @@
 import { Track } from "@spotify/web-api-ts-sdk";
-import * as cheerio from "cheerio";
+import { load } from "cheerio";
+import { Input, ALL_FORMATS, BlobSource } from "mediabunny";
+import { ofetch } from "ofetch";
+
+export async function getTrackPreviewDuration(previewUrl: string) {
+  console.log(previewUrl);
+  const blob = await ofetch(previewUrl, { responseType: "blob" });
+
+  const input = new Input({
+    formats: ALL_FORMATS,
+    source: new BlobSource(blob),
+  });
+
+  const format = await input.getFormat();
+  console.log(format);
+
+  return await input.computeDuration();
+}
 
 // inspired by https://github.com/lakshay007/spot
 export async function getPreviewUrl(track: Track) {
-  const response = await fetch(track.external_urls.spotify);
-  if (!response.ok)
-    throw new Error(
-      `Could not access track page: ${track.id} (${response.statusText})`
-    );
-
-  const html = await response.text();
-  const $ = cheerio.load(html);
+  const html = await ofetch(track.external_urls.spotify, {
+    responseType: "text",
+  });
+  const $ = load(html);
 
   return $('meta[property="og:audio"]').attr("content");
 }

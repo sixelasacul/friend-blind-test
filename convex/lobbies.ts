@@ -20,7 +20,7 @@ import { Id } from "./_generated/dataModel";
 const TIME_BETWEEN_SONGS = 5_000;
 const PREVIEW_SONG_DURATION = 30_000;
 // later, that can be a lobby setting
-export const SONGS_TO_GENERATE = 10;
+export const SONGS_TO_GENERATE = 20;
 
 function getTrackHistory(ctx: GenericCtx, lobbyId: Id<"lobbies">) {
   return (
@@ -51,13 +51,14 @@ export const getGameInfo = query({
     const preparedPlayers = preparePlayersWithScore(
       players,
       answers,
-      allTracks
+      allTracks,
+      currentGameTrack,
     );
 
     const preparedTracks = prepareTracksWithPlayerAnswers(
       players,
       answers,
-      allTracks
+      allTracks,
     );
     // a bit op, will see to do it within preparedTracks
     const [prepareCurrentGameTrack] = currentGameTrack
@@ -67,7 +68,7 @@ export const getGameInfo = query({
     const previousTracks = preparedTracks.filter(
       (track) =>
         game.status === "finished" ||
-        track.order < (currentGameTrack?.order ?? 0)
+        track.order < (currentGameTrack?.order ?? 0),
     );
 
     const { _id, previewUrl, playerAnswers } = prepareCurrentGameTrack ?? {};
@@ -88,6 +89,7 @@ export const getGameInfo = query({
 });
 
 export const create = mutation({
+  args: {},
   async handler(ctx) {
     return await ctx.db.insert("lobbies", {
       status: "waiting",
@@ -128,10 +130,11 @@ export const prepareLobbyForStartIfPossible = internalMutation({
   args: { lobbyId: v.id("lobbies") },
   async handler(ctx, { lobbyId }) {
     const players = await getPlayers(ctx, lobbyId);
-    const onlinePlayers = players.filter((player) => player.online);
 
-    if (onlinePlayers.length < 2 || !onlinePlayers.every((p) => p.ready))
-      return;
+    // bypass during dev to start the game with only one player
+    // const onlinePlayers = players.filter((player) => player.online);
+    // if (onlinePlayers.length < 2 || !onlinePlayers.every((p) => p.ready))
+    //   return;
 
     const offlinePlayers = players.filter((player) => !player.online);
 
@@ -159,8 +162,8 @@ export const getGameArtists = internalQuery({
         ctx.db
           .query("artists")
           .withIndex("by_player", (q) => q.eq("playerId", p._id))
-          .collect()
-      )
+          .collect(),
+      ),
     );
     return artists;
   },
@@ -177,14 +180,14 @@ export const addSongs = internalMutation({
         artists: v.array(v.string()),
         previewUrl: v.string(),
         order: v.number(),
-      })
+      }),
     ),
   },
   async handler(ctx, { tracks }) {
     const lobbyId = tracks[0].lobbyId;
 
     const [firstTrackId] = await Promise.all(
-      tracks.map((song) => ctx.db.insert("tracks", song))
+      tracks.map((song) => ctx.db.insert("tracks", song)),
     );
 
     ctx.scheduler.runAfter(TIME_BETWEEN_SONGS, internal.lobbies.startGame, {
@@ -208,7 +211,7 @@ export const startGame = internalMutation({
     ctx.scheduler.runAfter(
       PREVIEW_SONG_DURATION,
       internal.lobbies.prepareNextSong,
-      { lobbyId, currentTrackId: firstTrackId }
+      { lobbyId, currentTrackId: firstTrackId },
     );
   },
 });
@@ -216,6 +219,7 @@ export const startGame = internalMutation({
 export const prepareNextSong = internalMutation({
   args: { lobbyId: v.id("lobbies"), currentTrackId: v.id("tracks") },
   async handler(ctx, { lobbyId, currentTrackId }) {
+    console.log("prepareNextSong");
     const currentSong = await ctx.db.get(currentTrackId);
 
     if (!currentSong) throw new Error(`Song does not exist: ${currentTrackId}`);
@@ -223,9 +227,17 @@ export const prepareNextSong = internalMutation({
     const nextSong = await ctx.db
       .query("tracks")
       .withIndex("by_lobby_and_order", (q) =>
-        q.eq("lobbyId", lobbyId).eq("order", currentSong.order + 1)
+        q.eq("lobbyId", lobbyId).eq("order", currentSong.order + 1),
       )
       .first();
+
+    // we pause first even when game ends to prevent audio from playing again
+    // if the route changed didn't occur before
+    await ctx.db.patch(lobbyId, {
+      status: "paused",
+      currentTrackId: nextSong?._id ?? undefined,
+    });
+    console.log("paused");
 
     if (!nextSong) {
       ctx.scheduler.runAfter(TIME_BETWEEN_SONGS, internal.lobbies.endGame, {
@@ -233,11 +245,6 @@ export const prepareNextSong = internalMutation({
       });
       return;
     }
-
-    await ctx.db.patch(lobbyId, {
-      status: "paused",
-      currentTrackId: nextSong._id,
-    });
 
     ctx.scheduler.runAfter(TIME_BETWEEN_SONGS, internal.lobbies.startNextSong, {
       lobbyId,
@@ -249,15 +256,17 @@ export const prepareNextSong = internalMutation({
 export const startNextSong = internalMutation({
   args: { lobbyId: v.id("lobbies"), nextSongId: v.id("tracks") },
   async handler(ctx, { lobbyId, nextSongId }) {
+    console.log("startNextSong");
     await ctx.db.patch(lobbyId, {
       status: "playing",
       startedTrackAt: Date.now(),
     });
+    console.log("playing");
 
     ctx.scheduler.runAfter(
       PREVIEW_SONG_DURATION,
       internal.lobbies.prepareNextSong,
-      { lobbyId, currentTrackId: nextSongId }
+      { lobbyId, currentTrackId: nextSongId },
     );
   },
 });
@@ -265,6 +274,7 @@ export const startNextSong = internalMutation({
 export const endGame = internalMutation({
   args: { lobbyId: v.id("lobbies") },
   async handler(ctx, { lobbyId }) {
+    console.log("endGame");
     await ctx.db.patch(lobbyId, {
       status: "finished",
       currentTrackId: undefined,

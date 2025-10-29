@@ -9,28 +9,42 @@ const CORRECT_TERM_THRESHOLD = 1;
 // maximum percentage of correct terms needed for an answer
 const CORRECT_OVERALL_THRESHOLD = 0.8;
 
+// can include (or via another function) transformations like "R" <-> "are",
+// "4" <-> "for", "$" <-> "s"
+// or within checkParts, or a special prepare function for answers, so that we
+// inject aliases in the answer parts to be checked
+// might remove numbers as well from the title to make things easier (and changing
+// difficulty to not remove them)
 function prepare(str: string) {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^\w\s]/, "")
-    .split(" ");
+  return (
+    str
+      .toLowerCase()
+      .normalize("NFD")
+      // note: instead of multiple replace, could be a single replace with different regexes?
+      .replace(/\p{Diacritic}/gu, "")
+      // just can't get enough -> just cant get enough
+      .replace(/[']/g, "")
+      // champs-élysées -> champs elysees
+      .replace(/[-_]/g, " ")
+      // fallback for the rest of special characters, like M|O|O|N -> MOON
+      .replace(/[^\w\s\d]/g, "")
+      .split(" ")
+  );
 }
 
 function checkParts(
   answerPart: string,
   toMatch: string[],
   // mutable
-  alreadyMatchParts: Set<string>
+  matchedParts: Set<string>,
 ) {
   return toMatch.some((part) => {
-    if (alreadyMatchParts.has(part)) return false;
+    if (matchedParts.has(part)) return false;
 
     const match = distance(part, answerPart) <= CORRECT_TERM_THRESHOLD;
     if (!match) return false;
 
-    alreadyMatchParts.add(part);
+    matchedParts.add(part);
     return match;
   });
 }
@@ -39,39 +53,48 @@ function checkAnswer(
   answerText: string,
   partialAnswer: string,
   track: string,
-  artists: string[]
+  artists: string[],
 ) {
+  // Note: Take word length in account to validate correctness of the answer
+  // Perhaps ignore words of less than 2 letters
   const preparedTrack = prepare(track);
-  const preparedArtists = prepare(artists.join(" "));
+  const preparedArtists = artists.map(prepare);
   const preparedPartialAnswer = prepare(partialAnswer);
   const preparedAnswer = prepare(answerText).concat(preparedPartialAnswer);
 
   let trackScore = 0;
-  let artistScore = 0;
+  let artistScores = Array.from<number>({ length: artists.length }).fill(0);
   const correctTermsFromAnswer = new Set<string>(preparedPartialAnswer);
-  const matchedTrackParts = new Set<string>();
-  const matchedArtistParts = new Set<string>();
+  const matchedParts = new Set<string>();
 
+  // could be optimized I guess; once something has been matched, it shouldn't be checked again
+  // perhaps having some kind of Map indexed by part, with answer part as value
+  // or mutating prepared* to remove what has been matched (in a different variable
+  // to not mess up the threshold check)
   for (const answerPart of preparedAnswer) {
-    const trackMatch = checkParts(answerPart, preparedTrack, matchedTrackParts);
-    const artistMatch = checkParts(
-      answerPart,
-      preparedArtists,
-      matchedArtistParts
+    const trackMatch = checkParts(answerPart, preparedTrack, matchedParts);
+    const artistMatches = preparedArtists.map((artist) =>
+      checkParts(answerPart, artist, matchedParts),
     );
 
-    if (artistMatch || trackMatch) {
+    if (trackMatch || artistMatches.some(Boolean)) {
       correctTermsFromAnswer.add(answerPart);
     }
 
-    artistScore += artistMatch ? 1 : 0;
+    artistScores = artistMatches.map(
+      (match, index) => (artistScores[index] += match ? 1 : 0),
+    );
     trackScore += trackMatch ? 1 : 0;
   }
 
   const guessedTrack =
     trackScore / preparedTrack.length >= CORRECT_OVERALL_THRESHOLD;
-  const guessedArtists =
-    artistScore / preparedArtists.length >= CORRECT_OVERALL_THRESHOLD;
+  // if at least one of the artists is passes the threshold, we can consider it's guessed
+  // note: based on lobby difficulty, we could make this check stricter (.every)
+  const guessedArtists = artistScores.some(
+    (artistScore, index) =>
+      artistScore / preparedArtists[index].length >= CORRECT_OVERALL_THRESHOLD,
+  );
 
   return {
     partialAnswer: [...correctTermsFromAnswer].join(" "),
@@ -80,8 +103,6 @@ function checkAnswer(
   };
 }
 
-// Note: Take word length in account to validate correctness of the answer
-// Perhaps ignore words of less than 2 letters
 export const guessTrackNameAndArtists = mutation({
   args: {
     playerId: v.id("players"),
@@ -89,10 +110,14 @@ export const guessTrackNameAndArtists = mutation({
     answerText: v.string(),
   },
   async handler(ctx, { playerId, lobbyId, answerText }) {
+    // even if it's validated later, so that "race to first" doesn't take server
+    // tasks in account
+    const timestamp = Date.now();
+
     const { answer, currentTrack } = await prepareAnswerContext(
       ctx,
       playerId,
-      lobbyId
+      lobbyId,
     );
 
     const {
@@ -109,10 +134,8 @@ export const guessTrackNameAndArtists = mutation({
       answerText,
       prevPartialAnswer,
       currentTrack.name,
-      currentTrack.artists
+      currentTrack.artists,
     );
-
-    const timestamp = Date.now();
 
     await Promise.all([
       ctx.db.patch(_id, {
@@ -138,7 +161,7 @@ export const guessPlayer = mutation({
     const { answer, currentTrack } = await prepareAnswerContext(
       ctx,
       playerId,
-      lobbyId
+      lobbyId,
     );
 
     if (answer.guessedPlayerId) {
@@ -166,7 +189,7 @@ export const getPlayerAnswer = query({
   async handler(ctx, { playerId, lobbyId }) {
     const { currentTrackId } = await getOrThrow(
       ctx.db.get(lobbyId),
-      "Game not found"
+      "Game not found",
     );
 
     if (!currentTrackId) {
@@ -177,7 +200,7 @@ export const getPlayerAnswer = query({
       (await ctx.db
         .query("answers")
         .withIndex("by_player_and_track", (q) =>
-          q.eq("playerId", playerId).eq("trackId", currentTrackId)
+          q.eq("playerId", playerId).eq("trackId", currentTrackId),
         )
         .unique()) ?? {};
 

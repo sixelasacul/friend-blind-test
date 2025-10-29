@@ -9,7 +9,7 @@ export type GenericCtx = QueryCtx | MutationCtx;
 
 export async function getOrThrow<T>(
   promise: Promise<T | null>,
-  errorMessage: string
+  errorMessage: string,
 ) {
   const entity = await promise;
 
@@ -39,12 +39,15 @@ export async function getLobbyAnswers(ctx: GenericCtx, lobbyId: Id<"lobbies">) {
 // like Object.groupBy, but each key should have a unique value, e.g. indexed by id
 export function arrayToRecord<T, K extends PropertyKey>(
   array: T[],
-  keySelector: (item: T) => K
+  keySelector: (item: T) => K,
 ): Record<K, T> {
-  return array.reduce<Record<K, T>>((acc, item) => {
-    acc[keySelector(item)] = item;
-    return acc;
-  }, {} as Record<K, T>);
+  return array.reduce<Record<K, T>>(
+    (acc, item) => {
+      acc[keySelector(item)] = item;
+      return acc;
+    },
+    {} as Record<K, T>,
+  );
 }
 
 type PlayerWithAnswerAndScore = Doc<"players"> &
@@ -56,7 +59,8 @@ type PlayerWithAnswerAndScore = Doc<"players"> &
 export function preparePlayersWithScore(
   players: Doc<"players">[],
   answers: Doc<"answers">[],
-  tracks: Doc<"tracks">[]
+  tracks: Doc<"tracks">[],
+  currentGameTrack: Doc<"tracks"> | null,
 ): PlayerWithAnswerAndScore[] {
   // Indexes tracks by id in one loop so that answers don't loop through it on each
   // iteration to find the related track
@@ -100,17 +104,26 @@ export function preparePlayersWithScore(
       // a player may not have answer yet at any point of the game
       const trackAnswers = trackAnswersByPlayerId[player._id] ?? [];
 
-      const score = trackAnswers.reduce((acc, answer) => {
+      let score = 0;
+      let currentTrackAnswer:
+        | (Doc<"answers"> & { track: Doc<"tracks">; position: number })
+        | undefined;
+
+      for (const answer of trackAnswers) {
         const answerScore = computeScore(
           answer.track?.playerId === player._id,
           !!answer.guessedTrackNameAt,
           !!answer.guessedArtistsAt,
           !!answer.guessedPlayerAt,
-          answer.position
+          answer.position,
         );
 
-        return acc + answerScore;
-      }, 0);
+        score += answerScore;
+
+        if (currentGameTrack && answer.track._id === currentGameTrack._id) {
+          currentTrackAnswer = answer;
+        }
+      }
 
       return {
         ...player,
@@ -118,9 +131,9 @@ export function preparePlayersWithScore(
         // and each track, to build up the history, while still having the current
         // track?
         // not a fan but that would make more sense to have these in here, for the UI
-        // guessedArtistsAt,
-        // guessedPlayerAt,
-        // guessedTrackNameAt,
+        guessedArtistsAt: currentTrackAnswer?.guessedArtistsAt,
+        guessedPlayerAt: currentTrackAnswer?.guessedPlayerAt,
+        guessedTrackNameAt: currentTrackAnswer?.guessedTrackNameAt,
         score,
       };
     })
@@ -130,7 +143,7 @@ export function preparePlayersWithScore(
 export function prepareTracksWithPlayerAnswers(
   players: Doc<"players">[],
   answers: Doc<"answers">[],
-  tracks: Doc<"tracks">[]
+  tracks: Doc<"tracks">[],
 ) {
   const playersById = arrayToRecord(players, (player) => player._id);
   const answersByTrackId = Object.groupBy(answers, (answer) => answer.trackId);
@@ -148,7 +161,7 @@ export function prepareTracksWithPlayerAnswers(
           guessedPlayerAt,
           guessedTrackNameAt,
         };
-      }
+      },
     );
     return {
       ...track,
@@ -164,12 +177,12 @@ async function getOrInsertAnswer(
   ctx: MutationCtx,
   lobbyId: Id<"lobbies">,
   playerId: Id<"players">,
-  trackId: Id<"tracks">
+  trackId: Id<"tracks">,
 ) {
   const answer = await ctx.db
     .query("answers")
     .withIndex("by_player_and_track", (q) =>
-      q.eq("playerId", playerId).eq("trackId", trackId)
+      q.eq("playerId", playerId).eq("trackId", trackId),
     )
     .unique();
 
@@ -196,11 +209,11 @@ async function getOrInsertAnswer(
 export async function prepareAnswerContext(
   ctx: MutationCtx,
   playerId: Id<"players">,
-  lobbyId: Id<"lobbies">
+  lobbyId: Id<"lobbies">,
 ) {
   const { currentTrackId } = await getOrThrow(
     ctx.db.get(lobbyId),
-    `Game not found ${lobbyId}`
+    `Game not found ${lobbyId}`,
   );
 
   if (!currentTrackId)
@@ -210,7 +223,7 @@ export async function prepareAnswerContext(
     getOrInsertAnswer(ctx, lobbyId, playerId, currentTrackId),
     getOrThrow(
       ctx.db.get(currentTrackId),
-      `Track not found: ${currentTrackId}`
+      `Track not found: ${currentTrackId}`,
     ),
   ]);
 

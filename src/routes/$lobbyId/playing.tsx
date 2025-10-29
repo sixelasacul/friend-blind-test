@@ -19,20 +19,28 @@ function RouteComponent() {
 
   // when someone joins after the music has started, sync the audio with the others
   useEffect(() => {
+    if (!audioRef.current || gameInfo?.game.status !== "playing") return;
+
     const diff = Date.now() - (gameInfo?.game.startedTrackAt ?? Date.now());
-    if (audioRef.current) {
-      if (diff > 1_000) {
-        audioRef.current.currentTime = diff / 1000;
-      }
-      audioRef.current.play();
+    if (diff > 1_000) {
+      audioRef.current.currentTime = diff / 1000;
     }
-  }, [audioRef, gameInfo?.game.startedTrackAt]);
+    audioRef.current.play();
+  }, [audioRef.current, gameInfo?.game.status, gameInfo?.game.startedTrackAt]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!audioRef.current) return;
+      console.log(audioRef.current.duration, audioRef.current.currentTime);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [audioRef.current]);
 
   const guessPlayer = useMutation(api.answers.guessPlayer);
 
   const [answerText, setAnswerText] = useState("");
   const guessTrackNameAndArtists = useMutation(
-    api.answers.guessTrackNameAndArtists
+    api.answers.guessTrackNameAndArtists,
   );
   const answer = useQuery(api.answers.getPlayerAnswer, { lobbyId, playerId });
   // if answer.partialAnswer gets longer after `guessTrackNameAndArtists`, we
@@ -59,7 +67,7 @@ function RouteComponent() {
           e.preventDefault();
           // or perhaps use withOptimistic?
           guessTrackNameAndArtists({ answerText, lobbyId, playerId }).then(() =>
-            setAnswerText("")
+            setAnswerText(""),
           );
         }}
       >
@@ -89,9 +97,9 @@ function RouteComponent() {
             </button>
             <p>
               <span>{player.name}</span> (<span>{player.score}</span>)
-              {player.hadCorrectTrackNameAt && <span>Guessed track name</span>}
-              {player.hadCorrectArtistsAt && <span>Guessed artists</span>}
-              {player.hadCorrectPlayerAt && <span>Guessed player</span>}
+              {player.guessedTrackNameAt && <span>Guessed track name</span>}
+              {player.guessedArtistsAt && <span>Guessed artists</span>}
+              {player.guessedPlayerAt && <span>Guessed player</span>}
             </p>
           </li>
         ))}
@@ -100,7 +108,8 @@ function RouteComponent() {
       <ul>
         {previousTracks.map((track) => (
           <li key={track._id}>
-            {track.name} - {track.artists.join(", ")} (from {track.player})
+            {track.name} - {track.artists.join(", ")} (from{" "}
+            {track.sourcePlayer.name})
           </li>
         ))}
       </ul>

@@ -36,8 +36,15 @@ The search endpoint allow for some filters, but it's very flacky:
 ## TODO
 
 - [ ] Scoring
-  - Less points for songs related to a user's genre
-  - Points by speed
+  - [ ] Less points for songs related to a user's genre
+  - [ ] Points by speed
 - [ ] Include genres unrelated to users' choices
 - [ ] Min 1 artist
 - [ ] Difficulty settings (changes popularity threshold)
+- [ ] Prettier
+- [ ] Update tanstack router config and repo structure
+- [ ] Update code with deprecation notes (ts-router, eslint)
+- [ ] Debuggin tools
+  - [ ] Pause
+  - [ ] Skip
+  - [ ] Debugging logger

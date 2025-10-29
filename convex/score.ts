@@ -12,7 +12,7 @@ export function computeScore(
   guessedArtists: boolean,
   guessedPlayer: boolean,
   /** 0 is first */
-  answerPosition: number
+  answerPosition: number,
 ) {
   let score = 0;
   const malus = isPlayerTrack ? PLAYER_TRACK_MALUS : 0;

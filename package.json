@@ -8,8 +8,10 @@
     "dev:convex": "convex dev",
     "dev": "pnpm run \"/^dev:/\"",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "serve:vite": "vite preview",
+    "serve:convex": "convex dev",
+    "serve": "pnpm run \"/^serve:/\"",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@spotify/web-api-ts-sdk": "^1.2.0",
@@ -20,6 +22,7 @@
     "convex": "^1.27.3",
     "convex-helpers": "^0.1.104",
     "fastest-levenshtein": "^1.0.16",
+    "mediabunny": "^1.24.2",
     "ofetch": "^1.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -27,7 +30,9 @@
     "usehooks-ts": "^3.1.1"
   },
   "devDependencies": {
+    "@convex-dev/eslint-plugin": "^1.0.0",
     "@eslint/js": "^9.37.0",
+    "@tanstack/eslint-plugin-router": "^1.133.19",
     "@tanstack/router-plugin": "^1.132.41",
     "@types/node": "^24.7.0",
     "@types/react": "^19.2.0",
@@ -39,6 +44,7 @@
     "globals": "^16.4.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.0",
+    "vibe-rules": "^0.3.91",
     "vite": "^7.1.9"
   },
   "packageManager": "pnpm@10.18.0+sha512.e804f889f1cecc40d572db084eec3e4881739f8dec69c0ff10d2d1beff9a4e309383ba27b5b750059d7f4c149535b6cd0d2cb1ed3aeb739239a4284a68f40cfa"
