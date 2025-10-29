@@ -1,21 +1,30 @@
 import { Track } from "@spotify/web-api-ts-sdk";
 import { load } from "cheerio";
-import { Input, ALL_FORMATS, BlobSource } from "mediabunny";
+import { parseBlob, parseWebStream, parseBuffer } from "music-metadata";
 import { ofetch } from "ofetch";
 
 export async function getTrackPreviewDuration(previewUrl: string) {
   console.log(previewUrl);
-  const blob = await ofetch(previewUrl, { responseType: "blob" });
+  // const blob = await ofetch(previewUrl, { responseType: "blob" });
 
-  const input = new Input({
-    formats: ALL_FORMATS,
-    source: new BlobSource(blob),
+  // // could also use parseWebStream, not sure which one is more performant, also check
+  // // on ofetch (for stream, we should pass the size based on response header Content-Length)
+  // // so have to use ofetch.raw
+  // const metadata = await parseBlob(blob);
+  const { headers, body, ok } = await fetch(previewUrl);
+  if (!ok || !body) throw new Error("nobody");
+
+  // could also use parseWebStream, not sure which one is more performant, also check
+  // on ofetch (for stream, we should pass the size based on response header Content-Length)
+  // so have to use ofetch.raw
+  const length = headers.get("content-length");
+  const metadata = await parseWebStream(body, {
+    mimeType: headers.get("content-type") ?? undefined,
+    size: length ? parseInt(length) : undefined,
   });
+  console.log(metadata.format.container, metadata.common.title);
 
-  const format = await input.getFormat();
-  console.log(format);
-
-  return await input.computeDuration();
+  return metadata.format.duration;
 }
 
 // inspired by https://github.com/lakshay007/spot

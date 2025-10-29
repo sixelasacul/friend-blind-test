@@ -23,6 +23,7 @@
     "convex-helpers": "^0.1.104",
     "fastest-levenshtein": "^1.0.16",
     "mediabunny": "^1.24.2",
+    "music-metadata": "^11.9.0",
     "ofetch": "^1.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
