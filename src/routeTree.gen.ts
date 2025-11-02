@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DebugRouteImport } from './routes/debug'
 import { Route as LobbyIdRouteRouteImport } from './routes/$lobbyId/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LobbyIdWaitingRouteImport } from './routes/$lobbyId/waiting'
 import { Route as LobbyIdPlayingRouteImport } from './routes/$lobbyId/playing'
 import { Route as LobbyIdFinishedRouteImport } from './routes/$lobbyId/finished'
 
+const DebugRoute = DebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LobbyIdRouteRoute = LobbyIdRouteRouteImport.update({
   id: '/$lobbyId',
   path: '/$lobbyId',
@@ -44,6 +50,7 @@ const LobbyIdFinishedRoute = LobbyIdFinishedRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$lobbyId': typeof LobbyIdRouteRouteWithChildren
+  '/debug': typeof DebugRoute
   '/$lobbyId/finished': typeof LobbyIdFinishedRoute
   '/$lobbyId/playing': typeof LobbyIdPlayingRoute
   '/$lobbyId/waiting': typeof LobbyIdWaitingRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$lobbyId': typeof LobbyIdRouteRouteWithChildren
+  '/debug': typeof DebugRoute
   '/$lobbyId/finished': typeof LobbyIdFinishedRoute
   '/$lobbyId/playing': typeof LobbyIdPlayingRoute
   '/$lobbyId/waiting': typeof LobbyIdWaitingRoute
@@ -59,6 +67,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$lobbyId': typeof LobbyIdRouteRouteWithChildren
+  '/debug': typeof DebugRoute
   '/$lobbyId/finished': typeof LobbyIdFinishedRoute
   '/$lobbyId/playing': typeof LobbyIdPlayingRoute
   '/$lobbyId/waiting': typeof LobbyIdWaitingRoute
@@ -68,6 +77,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$lobbyId'
+    | '/debug'
     | '/$lobbyId/finished'
     | '/$lobbyId/playing'
     | '/$lobbyId/waiting'
@@ -75,6 +85,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$lobbyId'
+    | '/debug'
     | '/$lobbyId/finished'
     | '/$lobbyId/playing'
     | '/$lobbyId/waiting'
@@ -82,6 +93,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$lobbyId'
+    | '/debug'
     | '/$lobbyId/finished'
     | '/$lobbyId/playing'
     | '/$lobbyId/waiting'
@@ -90,10 +102,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LobbyIdRouteRoute: typeof LobbyIdRouteRouteWithChildren
+  DebugRoute: typeof DebugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/debug': {
+      id: '/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof DebugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$lobbyId': {
       id: '/$lobbyId'
       path: '/$lobbyId'
@@ -151,6 +171,7 @@ const LobbyIdRouteRouteWithChildren = LobbyIdRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LobbyIdRouteRoute: LobbyIdRouteRouteWithChildren,
+  DebugRoute: DebugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

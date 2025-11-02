@@ -1,28 +1,17 @@
 import { Track } from "@spotify/web-api-ts-sdk";
 import { load } from "cheerio";
-import { parseBlob, parseWebStream, parseBuffer } from "music-metadata";
+import { parseWebStream } from "music-metadata";
 import { ofetch } from "ofetch";
 
 export async function getTrackPreviewDuration(previewUrl: string) {
-  console.log(previewUrl);
-  // const blob = await ofetch(previewUrl, { responseType: "blob" });
-
-  // // could also use parseWebStream, not sure which one is more performant, also check
-  // // on ofetch (for stream, we should pass the size based on response header Content-Length)
-  // // so have to use ofetch.raw
-  // const metadata = await parseBlob(blob);
   const { headers, body, ok } = await fetch(previewUrl);
   if (!ok || !body) throw new Error("nobody");
 
-  // could also use parseWebStream, not sure which one is more performant, also check
-  // on ofetch (for stream, we should pass the size based on response header Content-Length)
-  // so have to use ofetch.raw
   const length = headers.get("content-length");
   const metadata = await parseWebStream(body, {
     mimeType: headers.get("content-type") ?? undefined,
     size: length ? parseInt(length) : undefined,
   });
-  console.log(metadata.format.container, metadata.common.title);
 
   return metadata.format.duration;
 }

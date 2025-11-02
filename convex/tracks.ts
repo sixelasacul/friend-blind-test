@@ -15,6 +15,74 @@ import { LastFmApi } from "./lastFmApi";
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 import { getSpotifySdk } from "./spotify";
 
+// for some reason, Spotify returns preview with duration of either 30s (approx. 29s)
+// and 17 seconds. For now, we don't want to use shorter ones. Later we may use them
+// all, we'd have to accommodate the scheduled functions.
+const MIN_DURATION = 28; // seconds
+
+export async function _generateLobbyTrack(
+  currentPlayerArtists: Doc<"artists">[],
+  lastFmApi: LastFmApi,
+  spotifyApi: SpotifyApi,
+) {
+  const artist =
+    currentPlayerArtists[randomNumber(0, currentPlayerArtists.length)];
+
+  const relatedArtists = (await lastFmApi.artist.getSimilar(artist.name))
+    .map(({ name }) => name)
+    .concat(artist.name);
+  const pickedArtist = relatedArtists[randomNumber(0, relatedArtists.length)];
+
+  const topTracks = await lastFmApi.artist.getTopTracks(pickedArtist);
+  const pickedTrack = topTracks[randomNumber(0, topTracks.length)];
+
+  // NOTE: If we detect non ascii characters in the title (after we sanitize it)
+  // like in the answers, then we skip and get another track
+
+  // Probably fine to not remove them here, but it could be done when
+  // checking answers (+ remove "radio edit", "remix" + remove part, pt)
+  const sanitizedTrack = removeFeaturings(pickedTrack.name);
+  const results = await spotifyApi.search(
+    `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
+    ["track"],
+    "FR",
+    1,
+  );
+  const spotifyTrack = results.tracks.items[0];
+  console.log(
+    `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
+    results.tracks.items,
+  );
+  // LastFM artists associated to tracks and albums are weird, e.g.
+  // Pretty DollCorpse are 3 albums, one with only Ptite Soeur, one with
+  // Ptite Soeur, Neophron, FEMTOGO, but they are grouped as one artist.
+  // Spotify is more accurate for this, so picking from this
+  const artists = spotifyTrack.artists.map(({ name }) => name);
+
+  const previewUrl = await getPreviewUrl(spotifyTrack);
+
+  // 1. should have logger so that we can debug and figure out which ones fail
+  // 2. should have a ban list to avoid retrying the same ones (even though unlikely)
+  // 2.1. simple set passed to next call
+  // 3. could have a retry on the preview?
+  if (!previewUrl) {
+    return _generateLobbyTrack(currentPlayerArtists, lastFmApi, spotifyApi);
+  }
+
+  const duration = (await getTrackPreviewDuration(previewUrl)) ?? 0;
+
+  if (duration < MIN_DURATION) {
+    return _generateLobbyTrack(currentPlayerArtists, lastFmApi, spotifyApi);
+  }
+
+  return {
+    playerId: artist.playerId,
+    previewUrl,
+    name: removeFeaturings(pickedTrack.name),
+    artists: artists,
+  };
+}
+
 async function _generateLobbyTracks(
   lobbyId: Id<"lobbies">,
   gameArtists: Doc<"artists">[][],
@@ -35,58 +103,15 @@ async function _generateLobbyTracks(
   const tracks = await Promise.all(
     pickedPlayerIndices.map(async (playerIndex, index) => {
       const currentPlayerArtists = gameArtists[playerIndex];
-      const artist =
-        currentPlayerArtists[randomNumber(0, currentPlayerArtists.length)];
-
-      const relatedArtists = (await lastFmApi.artist.getSimilar(artist.name))
-        .map(({ name }) => name)
-        .concat(artist.name);
-      const pickedArtist =
-        relatedArtists[randomNumber(0, relatedArtists.length)];
-
-      const topTracks = await lastFmApi.artist.getTopTracks(pickedArtist);
-      const pickedTrack = topTracks[randomNumber(0, topTracks.length)];
-
-      // NOTE: If we detect non ascii characters in the title (after we sanitize it)
-      // like in the answers, then we skip and get another track
-
-      // Probably fine to not remove them here, but it could be done when
-      // checking answers (+ remove "radio edit", "remix" + remove part, pt)
-      const sanitizedTrack = removeFeaturings(pickedTrack.name);
-      const results = await spotifyApi.search(
-        `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
-        ["track"],
-        "FR",
-        1,
-      );
-      const spotifyTrack = results.tracks.items[0];
-      console.log(
-        `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
-        results.tracks.items,
-      );
-      // LastFM artists associated to tracks and albums are weird, e.g.
-      // Pretty DollCorpse are 3 albums, one with only Ptite Soeur, one with
-      // Ptite Soeur, Neophron, FEMTOGO, but they are grouped as one artist.
-      // Spotify is more accurate for this, so picking from this
-      const artists = spotifyTrack.artists.map(({ name }) => name);
-
-      // for now we'll pretend that every track has a preview URL
-      // later (and if that's not the case), we can add a while loop
-      // to try with a different related song
-      // (that can also be used to avoid duplicate songs)
-      // to fix that we should put this into a function and do a recursion on error
-      const previewUrl = (await getPreviewUrl(spotifyTrack))!;
-
-      const duration = await getTrackPreviewDuration(previewUrl);
-      console.log({ duration });
 
       return {
+        ...(await _generateLobbyTrack(
+          currentPlayerArtists,
+          lastFmApi,
+          spotifyApi,
+        )),
         lobbyId,
-        playerId: currentPlayerArtists[0].playerId,
         order: index,
-        previewUrl,
-        name: removeFeaturings(pickedTrack.name),
-        artists: artists,
       };
     }),
   );

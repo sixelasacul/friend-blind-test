@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as answers from "../answers.js";
 import type * as artists from "../artists.js";
+import type * as debug from "../debug.js";
 import type * as lastFm from "../lastFm.js";
 import type * as lastFmApi from "../lastFmApi.js";
 import type * as lobbies from "../lobbies.js";
@@ -36,6 +37,7 @@ import type * as utils from "../utils.js";
 declare const fullApi: ApiFromModules<{
   answers: typeof answers;
   artists: typeof artists;
+  debug: typeof debug;
   lastFm: typeof lastFm;
   lastFmApi: typeof lastFmApi;
   lobbies: typeof lobbies;

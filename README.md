@@ -47,4 +47,5 @@ The search endpoint allow for some filters, but it's very flacky:
 - [ ] Debuggin tools
   - [ ] Pause
   - [ ] Skip
-  - [ ] Debugging logger
+  - [ ] Dedicated page to generate songs for a single artist
+  - [ ] Debugging logger (pino + pino-pretty on convex logs)
