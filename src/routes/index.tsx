@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -18,5 +18,10 @@ function RouteComponent() {
     });
   }
 
-  return <button onClick={createLobbyThenRedirect}>Create a lobby</button>;
+  return (
+    <div className="flex flex-col items-start gap-4">
+      <button onClick={createLobbyThenRedirect}>Create a lobby</button>
+      <Link to="/debug">Debug</Link>
+    </div>
+  );
 }

@@ -1,3 +1,4 @@
+import { pino } from "pino";
 import { v } from "convex/values";
 import { getLastFmSdk, lastFmInternalAction } from "./lastFm";
 import { internalAction } from "./_generated/server";
@@ -15,6 +16,10 @@ import { LastFmApi } from "./lastFmApi";
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 import { getSpotifySdk } from "./spotify";
 
+const logger = pino({
+  level: "debug",
+});
+
 // for some reason, Spotify returns preview with duration of either 30s (approx. 29s)
 // and 17 seconds. For now, we don't want to use shorter ones. Later we may use them
 // all, we'd have to accommodate the scheduled functions.
@@ -25,16 +30,27 @@ export async function _generateLobbyTrack(
   lastFmApi: LastFmApi,
   spotifyApi: SpotifyApi,
 ) {
-  const artist =
-    currentPlayerArtists[randomNumber(0, currentPlayerArtists.length)];
+  // should not continue if `currentPlayerArtists` is empty
+
+  const artistIndex = randomNumber(0, currentPlayerArtists.length);
+  const artist = currentPlayerArtists[artistIndex];
+
+  const contextLogger = logger.child({
+    originalArtist: artist.name,
+    playerId: artist.playerId,
+  });
+
+  const playerArtistsToRetry = currentPlayerArtists.toSpliced(artistIndex, 1);
 
   const relatedArtists = (await lastFmApi.artist.getSimilar(artist.name))
     .map(({ name }) => name)
     .concat(artist.name);
   const pickedArtist = relatedArtists[randomNumber(0, relatedArtists.length)];
+  contextLogger.debug({ pickedArtist });
 
   const topTracks = await lastFmApi.artist.getTopTracks(pickedArtist);
   const pickedTrack = topTracks[randomNumber(0, topTracks.length)];
+  contextLogger.debug({ pickedTrack: pickedTrack.name });
 
   // NOTE: If we detect non ascii characters in the title (after we sanitize it)
   // like in the answers, then we skip and get another track
@@ -49,10 +65,13 @@ export async function _generateLobbyTrack(
     1,
   );
   const spotifyTrack = results.tracks.items[0];
-  console.log(
-    `artist:"${pickedTrack.artist.name}" track:"${sanitizedTrack}"`,
-    results.tracks.items,
-  );
+  contextLogger.debug({ spotifyResults: results.tracks.items.length });
+
+  if (results.tracks.items.length === 0) {
+    contextLogger.debug("Not found in Spotify");
+    return _generateLobbyTrack(playerArtistsToRetry, lastFmApi, spotifyApi);
+  }
+
   // LastFM artists associated to tracks and albums are weird, e.g.
   // Pretty DollCorpse are 3 albums, one with only Ptite Soeur, one with
   // Ptite Soeur, Neophron, FEMTOGO, but they are grouped as one artist.
@@ -60,20 +79,22 @@ export async function _generateLobbyTrack(
   const artists = spotifyTrack.artists.map(({ name }) => name);
 
   const previewUrl = await getPreviewUrl(spotifyTrack);
+  contextLogger.debug({ previewUrl });
 
-  // 1. should have logger so that we can debug and figure out which ones fail
-  // 2. should have a ban list to avoid retrying the same ones (even though unlikely)
-  // 2.1. simple set passed to next call
-  // 3. could have a retry on the preview?
   if (!previewUrl) {
-    return _generateLobbyTrack(currentPlayerArtists, lastFmApi, spotifyApi);
+    contextLogger.debug("Cannot retrieve preview URL");
+    return _generateLobbyTrack(playerArtistsToRetry, lastFmApi, spotifyApi);
   }
 
   const duration = (await getTrackPreviewDuration(previewUrl)) ?? 0;
+  contextLogger.debug({ duration });
 
   if (duration < MIN_DURATION) {
-    return _generateLobbyTrack(currentPlayerArtists, lastFmApi, spotifyApi);
+    contextLogger.debug("Preview is shorted than expected");
+    return _generateLobbyTrack(playerArtistsToRetry, lastFmApi, spotifyApi);
   }
+
+  contextLogger.debug("Worked");
 
   return {
     playerId: artist.playerId,
