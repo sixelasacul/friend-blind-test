@@ -19,32 +19,32 @@ import { Route as LobbyIdFinishedRouteImport } from './routes/$lobbyId/finished'
 const DebugRoute = DebugRouteImport.update({
   id: '/debug',
   path: '/debug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const LobbyIdRouteRoute = LobbyIdRouteRouteImport.update({
   id: '/$lobbyId',
   path: '/$lobbyId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => rootRouteImport
 } as any)
 const LobbyIdWaitingRoute = LobbyIdWaitingRouteImport.update({
   id: '/waiting',
   path: '/waiting',
-  getParentRoute: () => LobbyIdRouteRoute,
+  getParentRoute: () => LobbyIdRouteRoute
 } as any)
 const LobbyIdPlayingRoute = LobbyIdPlayingRouteImport.update({
   id: '/playing',
   path: '/playing',
-  getParentRoute: () => LobbyIdRouteRoute,
+  getParentRoute: () => LobbyIdRouteRoute
 } as any)
 const LobbyIdFinishedRoute = LobbyIdFinishedRouteImport.update({
   id: '/finished',
   path: '/finished',
-  getParentRoute: () => LobbyIdRouteRoute,
+  getParentRoute: () => LobbyIdRouteRoute
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -161,17 +161,17 @@ interface LobbyIdRouteRouteChildren {
 const LobbyIdRouteRouteChildren: LobbyIdRouteRouteChildren = {
   LobbyIdFinishedRoute: LobbyIdFinishedRoute,
   LobbyIdPlayingRoute: LobbyIdPlayingRoute,
-  LobbyIdWaitingRoute: LobbyIdWaitingRoute,
+  LobbyIdWaitingRoute: LobbyIdWaitingRoute
 }
 
 const LobbyIdRouteRouteWithChildren = LobbyIdRouteRoute._addFileChildren(
-  LobbyIdRouteRouteChildren,
+  LobbyIdRouteRouteChildren
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LobbyIdRouteRoute: LobbyIdRouteRouteWithChildren,
-  DebugRoute: DebugRoute,
+  DebugRoute: DebugRoute
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

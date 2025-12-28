@@ -35,17 +35,28 @@ The search endpoint allow for some filters, but it's very flacky:
 
 ## TODO
 
-- [ ] Scoring
-  - [ ] Less points for songs related to a user's genre
-  - [ ] Points by speed
-- [ ] Include genres unrelated to users' choices
+### MVP
+
 - [ ] Min 1 artist
-- [ ] Difficulty settings (changes popularity threshold)
-- [ ] Prettier
-- [ ] Update tanstack router config and repo structure
-- [ ] Update code with deprecation notes (ts-router, eslint)
+
+### Technical
+
+- [ ] Update README
+- [x] Prettier
+- [x] Oxlint + Oxformat (kinda works but not for all the plugins I have, though I can still use it with eslint)
+- [x] lefthook (lint-staged)
+- [x] Update tanstack router config and repo structure
+  - [x] Probably run create-tsrouter-app to redo everything (wasn't available at first)
+- [x] Update code with deprecation notes (ts-router, eslint)
 - [ ] Debuggin tools
   - [ ] Pause
   - [ ] Skip
   - [ ] Dedicated page to generate songs for a single artist
+    - [ ] Use virtual route from tsrouter to not have it on prod
+    - [ ] Or simply use beforeload, but the code will be bundled (though with automatic code splitting, that's no an issue)
   - [ ] Debugging logger (pino + pino-pretty on convex logs)
+
+### Future features
+
+- [ ] Include genres unrelated to users' choices
+- [ ] Difficulty settings (changes popularity threshold)

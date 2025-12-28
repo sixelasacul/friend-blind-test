@@ -1,57 +1,49 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { useGameInfo } from "../../hooks/useGameInfo";
-import { api } from "../../../convex/_generated/api";
-import { useVolume } from "../../hooks/useVolume";
-import { Volume } from "../../components/Volume";
+import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
+import { useGameInfo } from '../../hooks/useGameInfo'
+import { api } from '../../../convex/_generated/api'
+import { useVolume } from '../../hooks/useVolume'
+import { Volume } from '../../components/Volume'
 
-export const Route = createFileRoute("/$lobbyId/playing")({
-  component: RouteComponent,
-});
+export const Route = createFileRoute('/$lobbyId/playing')({
+  component: RouteComponent
+})
 
 // https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay
 function RouteComponent() {
-  const { lobbyId, playerId } = Route.useRouteContext();
-  const gameInfo = useGameInfo();
+  const { lobbyId, playerId } = Route.useRouteContext()
+  const gameInfo = useGameInfo()
 
-  const { audioRef, defaultVolume, onVolumeChange } = useVolume();
+  const { audioRef, defaultVolume, onVolumeChange } = useVolume()
 
   // when someone joins after the music has started, sync the audio with the others
   useEffect(() => {
-    if (!audioRef.current || gameInfo?.game.status !== "playing") return;
+    if (!audioRef.current || gameInfo?.game.status !== 'playing') return
 
-    const diff = Date.now() - (gameInfo?.game.startedTrackAt ?? Date.now());
+    const diff = Date.now() - (gameInfo?.game.startedTrackAt ?? Date.now())
     if (diff > 1_000) {
-      audioRef.current.currentTime = diff / 1000;
+      audioRef.current.currentTime = diff / 1000
     }
-    audioRef.current.play();
-  }, [audioRef.current, gameInfo?.game.status, gameInfo?.game.startedTrackAt]);
+    audioRef.current.play()
+  }, [audioRef, gameInfo?.game.status, gameInfo?.game.startedTrackAt])
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!audioRef.current) return;
-      console.log(audioRef.current.duration, audioRef.current.currentTime);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [audioRef.current]);
+  const guessPlayer = useMutation(api.answers.guessPlayer)
 
-  const guessPlayer = useMutation(api.answers.guessPlayer);
-
-  const [answerText, setAnswerText] = useState("");
+  const [answerText, setAnswerText] = useState('')
   const guessTrackNameAndArtists = useMutation(
-    api.answers.guessTrackNameAndArtists,
-  );
-  const answer = useQuery(api.answers.getPlayerAnswer, { lobbyId, playerId });
+    api.answers.guessTrackNameAndArtists
+  )
+  const answer = useQuery(api.answers.getPlayerAnswer, { lobbyId, playerId })
   // if answer.partialAnswer gets longer after `guessTrackNameAndArtists`, we
   // can notify the player
 
   if (!gameInfo || !answer) {
-    return <p>Loading</p>;
+    return <p>Loading</p>
   }
 
-  const { currentGameTrack, previousTracks, players } = gameInfo;
-  const { guessedArtistsAt, guessedPlayerAt, guessedTrackNameAt } = answer;
+  const { currentGameTrack, previousTracks, players } = gameInfo
+  const { guessedArtistsAt, guessedPlayerAt, guessedTrackNameAt } = answer
 
   return (
     <>
@@ -64,11 +56,11 @@ function RouteComponent() {
 
       <form
         onSubmit={(e) => {
-          e.preventDefault();
+          e.preventDefault()
           // or perhaps use withOptimistic?
           guessTrackNameAndArtists({ answerText, lobbyId, playerId }).then(() =>
-            setAnswerText(""),
-          );
+            setAnswerText('')
+          )
         }}
       >
         <label>
@@ -78,7 +70,7 @@ function RouteComponent() {
             onChange={(e) => setAnswerText(e.target.value)}
           />
         </label>
-        <button type="submit">Guess</button>
+        <button type='submit'>Guess</button>
       </form>
 
       {!!guessedTrackNameAt && <p>Guessed track name</p>}
@@ -108,11 +100,11 @@ function RouteComponent() {
       <ul>
         {previousTracks.map((track) => (
           <li key={track._id}>
-            {track.name} - {track.artists.join(", ")} (from{" "}
+            {track.name} - {track.artists.join(', ')} (from{' '}
             {track.sourcePlayer.name})
           </li>
         ))}
       </ul>
     </>
-  );
+  )
 }

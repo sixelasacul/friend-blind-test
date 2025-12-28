@@ -1,5 +1,5 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { defineSchema, defineTable } from 'convex/server'
+import { v } from 'convex/values'
 
 // future notes:
 // - allow to log in with spotify
@@ -9,18 +9,18 @@ export default defineSchema({
   lobbies: defineTable({
     status: v.union(
       // waiting for people to join and be ready
-      v.literal("waiting"),
+      v.literal('waiting'),
       // state in which every one is ready and it's generating songs to be played
-      v.literal("loading"),
+      v.literal('loading'),
       // transition state between rounds, in which no action should be done (ready/guess)
       // should always have a track id associated
-      v.literal("paused"),
+      v.literal('paused'),
       // should always have a track id associated
-      v.literal("playing"),
-      v.literal("finished")
+      v.literal('playing'),
+      v.literal('finished')
     ),
-    currentTrackId: v.optional(v.id("tracks")),
-    startedTrackAt: v.optional(v.number()),
+    currentTrackId: v.optional(v.id('tracks')),
+    startedTrackAt: v.optional(v.number())
     // settings idea:
     // strict: no leeway for the answers
     // how many songs
@@ -32,43 +32,43 @@ export default defineSchema({
   }),
 
   players: defineTable({
-    lobbyId: v.id("lobbies"),
+    lobbyId: v.id('lobbies'),
     name: v.string(),
     ready: v.boolean(),
     online: v.boolean(),
-    timeoutFn: v.optional(v.id("_scheduled_functions")),
-  }).index("by_lobby", ["lobbyId"]),
+    timeoutFn: v.optional(v.id('_scheduled_functions'))
+  }).index('by_lobby', ['lobbyId']),
 
   artists: defineTable({
-    playerId: v.id("players"),
+    playerId: v.id('players'),
     externalId: v.string(),
     // may want to remove these in the future if they aren't needed anymore
-    name: v.string(),
-  }).index("by_player", ["playerId"]),
+    name: v.string()
+  }).index('by_player', ['playerId']),
 
   tracks: defineTable({
-    lobbyId: v.id("lobbies"),
-    playerId: v.id("players"),
+    lobbyId: v.id('lobbies'),
+    playerId: v.id('players'),
     name: v.string(),
     /** May change to only the main artist */
     artists: v.array(v.string()),
     previewUrl: v.string(),
-    order: v.number(),
-  }).index("by_lobby_and_order", ["lobbyId", "order"]),
+    order: v.number()
+  }).index('by_lobby_and_order', ['lobbyId', 'order']),
 
   answers: defineTable({
-    lobbyId: v.id("lobbies"),
-    playerId: v.id("players"),
-    trackId: v.id("tracks"),
+    lobbyId: v.id('lobbies'),
+    playerId: v.id('players'),
+    trackId: v.id('tracks'),
     // we'd only save part of the answers that are correct and discard the rest
     partialAnswer: v.string(),
     // can make only one guess
-    guessedPlayerId: v.optional(v.id("players")),
+    guessedPlayerId: v.optional(v.id('players')),
     // if set, player guessed correctly
     guessedArtistsAt: v.optional(v.number()),
     guessedTrackNameAt: v.optional(v.number()),
-    guessedPlayerAt: v.optional(v.number()),
+    guessedPlayerAt: v.optional(v.number())
   })
-    .index("by_player_and_track", ["playerId", "trackId"])
-    .index("by_lobby", ["lobbyId"]),
-});
+    .index('by_player_and_track', ['playerId', 'trackId'])
+    .index('by_lobby', ['lobbyId'])
+})

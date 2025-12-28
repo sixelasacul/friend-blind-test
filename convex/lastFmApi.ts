@@ -1,32 +1,32 @@
-import { $Fetch, ofetch } from "ofetch";
+import { $Fetch, ofetch } from 'ofetch'
 
 type Image = {
-  "#text": string;
-  size: string;
-};
+  '#text': string
+  size: string
+}
 
 type Artist = {
-  name: string;
-  mbid: string;
-  match: number;
-  url: string;
-};
+  name: string
+  mbid: string
+  match: number
+  url: string
+}
 
 type Track = {
-  name: string;
-  playcount: number;
-  listeners: number;
-  url: string;
-  artist: Artist;
-};
+  name: string
+  playcount: number
+  listeners: number
+  url: string
+  artist: Artist
+}
 
 type WithImage = {
-  image: Image[];
-};
+  image: Image[]
+}
 
 type WithListeners = {
-  listeners: number;
-};
+  listeners: number
+}
 
 // TODO: perhaps rewrite the LastFm response to have more consistent structure?
 // - no resulsts on Search artists
@@ -34,92 +34,92 @@ type WithListeners = {
 // - camel case
 type SimilarArtists = {
   similarartists: {
-    artist: (Artist & WithImage)[];
-  };
-};
+    artist: (Artist & WithImage)[]
+  }
+}
 
 type SearchArtists = {
   results: {
     artistmatches: {
-      artist: (Artist & WithImage & WithListeners)[];
-    };
-  };
-};
+      artist: (Artist & WithImage & WithListeners)[]
+    }
+  }
+}
 
 type ArtistTopTracks = {
   toptracks: {
-    track: (Track & WithImage)[];
-  };
-};
+    track: (Track & WithImage)[]
+  }
+}
 
 class LastFmBaseApi {
-  protected fetch: $Fetch;
+  protected fetch: $Fetch
 
   constructor(apiKey: string) {
     this.fetch = ofetch.create({
-      baseURL: "http://ws.audioscrobbler.com/2.0/",
+      baseURL: 'http://ws.audioscrobbler.com/2.0/',
       params: {
-        api_key: apiKey,
-      },
-    });
+        api_key: apiKey
+      }
+    })
   }
 }
 
 class LastFmArtistApi extends LastFmBaseApi {
-  private static LISTENERS_THRESHOLD = 1_000;
+  private static LISTENERS_THRESHOLD = 1_000
 
   private static filterByListeners(artist: WithListeners) {
-    return artist.listeners >= LastFmArtistApi.LISTENERS_THRESHOLD;
+    return artist.listeners >= LastFmArtistApi.LISTENERS_THRESHOLD
   }
   private static sortByListeners(
     firstArtist: WithListeners,
     secondArtist: WithListeners
   ) {
-    return secondArtist.listeners - firstArtist.listeners;
+    return secondArtist.listeners - firstArtist.listeners
   }
 
   async getSimilar(artist: string, limit = 10) {
-    const { similarartists } = await this.fetch<SimilarArtists>("", {
+    const { similarartists } = await this.fetch<SimilarArtists>('', {
       params: {
-        method: "artist.getSimilar",
-        format: "json",
+        method: 'artist.getSimilar',
+        format: 'json',
         artist,
-        limit,
-      },
-    });
+        limit
+      }
+    })
 
-    return similarartists.artist;
+    return similarartists.artist
   }
 
   async search(artist: string, limit = 5) {
-    const { results } = await this.fetch<SearchArtists>("", {
+    const { results } = await this.fetch<SearchArtists>('', {
       params: {
-        method: "artist.search",
-        format: "json",
+        method: 'artist.search',
+        format: 'json',
         artist,
         // we retrieve more in case we have to filter out some results
-        limit: limit * 2,
-      },
-    });
+        limit: limit * 2
+      }
+    })
 
     const filteredArtists = results.artistmatches.artist.filter(
       LastFmArtistApi.filterByListeners
-    );
+    )
 
-    return filteredArtists.slice(0, limit);
+    return filteredArtists.slice(0, limit)
   }
 
   async getTopTracks(artist: string, limit = 10) {
-    const { toptracks } = await this.fetch<ArtistTopTracks>("", {
+    const { toptracks } = await this.fetch<ArtistTopTracks>('', {
       params: {
-        method: "artist.getTopTracks",
-        format: "json",
+        method: 'artist.getTopTracks',
+        format: 'json',
         artist,
-        limit,
-      },
-    });
+        limit
+      }
+    })
 
-    return toptracks.track;
+    return toptracks.track
   }
 }
 
@@ -131,9 +131,9 @@ class LastFmArtistApi extends LastFmBaseApi {
 // though I don't think I'll have the similar artists.
 
 export class LastFmApi {
-  public artist: LastFmArtistApi;
+  public artist: LastFmArtistApi
 
   constructor(apiKey: string) {
-    this.artist = new LastFmArtistApi(apiKey);
+    this.artist = new LastFmArtistApi(apiKey)
   }
 }

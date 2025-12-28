@@ -1,82 +1,82 @@
-import { QueryCtx, MutationCtx } from "./_generated/server";
-import { Doc, Id } from "./_generated/dataModel";
-import { computeScore } from "./score";
+import { QueryCtx, MutationCtx } from './_generated/server'
+import { Doc, Id } from './_generated/dataModel'
+import { computeScore } from './score'
 
-export type GenericCtx = QueryCtx | MutationCtx;
+export type GenericCtx = QueryCtx | MutationCtx
 
 // TODO:
 // create smaller util files based on entities, like `answers.utils.ts`
 
 export async function getOrThrow<T>(
   promise: Promise<T | null>,
-  errorMessage: string,
+  errorMessage: string
 ) {
-  const entity = await promise;
+  const entity = await promise
 
-  if (entity === null) throw new Error(errorMessage);
+  if (entity === null) throw new Error(errorMessage)
 
-  return entity;
+  return entity
 }
 
-export function getPlayers(ctx: GenericCtx, lobbyId: Id<"lobbies">) {
+export function getPlayers(ctx: GenericCtx, lobbyId: Id<'lobbies'>) {
   return ctx.db
-    .query("players")
-    .withIndex("by_lobby", (q) => q.eq("lobbyId", lobbyId))
-    .collect();
+    .query('players')
+    .withIndex('by_lobby', (q) => q.eq('lobbyId', lobbyId))
+    .collect()
 }
 
-export async function getTrack(ctx: GenericCtx, game: Doc<"lobbies">) {
-  return game.currentTrackId ? await ctx.db.get(game.currentTrackId) : null;
+export async function getTrack(ctx: GenericCtx, game: Doc<'lobbies'>) {
+  return game.currentTrackId ? await ctx.db.get(game.currentTrackId) : null
 }
 
-export async function getLobbyAnswers(ctx: GenericCtx, lobbyId: Id<"lobbies">) {
+export async function getLobbyAnswers(ctx: GenericCtx, lobbyId: Id<'lobbies'>) {
   return ctx.db
-    .query("answers")
-    .withIndex("by_lobby", (q) => q.eq("lobbyId", lobbyId))
-    .collect();
+    .query('answers')
+    .withIndex('by_lobby', (q) => q.eq('lobbyId', lobbyId))
+    .collect()
 }
 
 // like Object.groupBy, but each key should have a unique value, e.g. indexed by id
 export function arrayToRecord<T, K extends PropertyKey>(
   array: T[],
-  keySelector: (item: T) => K,
+  keySelector: (item: T) => K
 ): Record<K, T> {
   return array.reduce<Record<K, T>>(
     (acc, item) => {
-      acc[keySelector(item)] = item;
-      return acc;
+      acc[keySelector(item)] = item
+      return acc
     },
-    {} as Record<K, T>,
-  );
+    {} as Record<K, T>
+  )
 }
 
-type PlayerWithAnswerAndScore = Doc<"players"> &
+type PlayerWithAnswerAndScore = Doc<'players'> &
   Pick<
-    Doc<"answers">,
-    "guessedArtistsAt" | "guessedPlayerAt" | "guessedTrackNameAt"
-  > & { score: number };
+    Doc<'answers'>,
+    'guessedArtistsAt' | 'guessedPlayerAt' | 'guessedTrackNameAt'
+  > & { score: number }
 
 export function preparePlayersWithScore(
-  players: Doc<"players">[],
-  answers: Doc<"answers">[],
-  tracks: Doc<"tracks">[],
-  currentGameTrack: Doc<"tracks"> | null,
+  players: Doc<'players'>[],
+  answers: Doc<'answers'>[],
+  tracks: Doc<'tracks'>[],
+  currentGameTrack: Doc<'tracks'> | null
 ): PlayerWithAnswerAndScore[] {
   // Indexes tracks by id in one loop so that answers don't loop through it on each
   // iteration to find the related track
-  const tracksById = arrayToRecord(tracks, (track) => track._id);
+  const tracksById = arrayToRecord(tracks, (track) => track._id)
 
   // sorts the answers to rank the correct and quickest ones first
   // it's not yet based on track
   const sortedAnswers = answers.toSorted((first, second) => {
-    if (!first.guessedArtistsAt || !first.guessedTrackNameAt) return 1;
-    if (!second.guessedArtistsAt || !second.guessedTrackNameAt) return -1;
+    if (!first.guessedArtistsAt || !first.guessedTrackNameAt) return 1
+    if (!second.guessedArtistsAt || !second.guessedTrackNameAt) return -1
 
     return (
       Math.max(first.guessedArtistsAt, first.guessedTrackNameAt) -
       Math.max(second.guessedArtistsAt, second.guessedTrackNameAt)
-    );
-  });
+    )
+  })
 
   // Indexes track answers by player id in one loop so that answers don't loop
   // through it on each iteration to find the related track
@@ -84,30 +84,30 @@ export function preparePlayersWithScore(
   // are sorted)
   const trackAnswersByPlayerId = sortedAnswers.reduce<
     Record<
-      Id<"players">,
-      Array<Doc<"answers"> & { track: Doc<"tracks">; position: number }>
+      Id<'players'>,
+      Array<Doc<'answers'> & { track: Doc<'tracks'>; position: number }>
     >
   >((acc, trackAnswer) => {
-    const prevTrackAnswers = acc[trackAnswer.playerId] ?? [];
+    const prevTrackAnswers = acc[trackAnswer.playerId] ?? []
     acc[trackAnswer.playerId] = prevTrackAnswers.concat({
       ...trackAnswer,
       // they are inserted by order, and since they are sorted, the first one
       // will have position 0, second one 1, etc.
       position: prevTrackAnswers.length,
-      track: tracksById[trackAnswer.trackId],
-    });
-    return acc;
-  }, {});
+      track: tracksById[trackAnswer.trackId]
+    })
+    return acc
+  }, {})
 
   return players
     .map((player) => {
       // a player may not have answer yet at any point of the game
-      const trackAnswers = trackAnswersByPlayerId[player._id] ?? [];
+      const trackAnswers = trackAnswersByPlayerId[player._id] ?? []
 
-      let score = 0;
+      let score = 0
       let currentTrackAnswer:
-        | (Doc<"answers"> & { track: Doc<"tracks">; position: number })
-        | undefined;
+        | (Doc<'answers'> & { track: Doc<'tracks'>; position: number })
+        | undefined
 
       for (const answer of trackAnswers) {
         const answerScore = computeScore(
@@ -115,13 +115,13 @@ export function preparePlayersWithScore(
           !!answer.guessedTrackNameAt,
           !!answer.guessedArtistsAt,
           !!answer.guessedPlayerAt,
-          answer.position,
-        );
+          answer.position
+        )
 
-        score += answerScore;
+        score += answerScore
 
         if (currentGameTrack && answer.track._id === currentGameTrack._id) {
-          currentTrackAnswer = answer;
+          currentTrackAnswer = answer
         }
       }
 
@@ -134,66 +134,66 @@ export function preparePlayersWithScore(
         guessedArtistsAt: currentTrackAnswer?.guessedArtistsAt,
         guessedPlayerAt: currentTrackAnswer?.guessedPlayerAt,
         guessedTrackNameAt: currentTrackAnswer?.guessedTrackNameAt,
-        score,
-      };
+        score
+      }
     })
-    .toSorted((first, second) => second.score - first.score);
+    .toSorted((first, second) => second.score - first.score)
 }
 
 export function prepareTracksWithPlayerAnswers(
-  players: Doc<"players">[],
-  answers: Doc<"answers">[],
-  tracks: Doc<"tracks">[],
+  players: Doc<'players'>[],
+  answers: Doc<'answers'>[],
+  tracks: Doc<'tracks'>[]
 ) {
-  const playersById = arrayToRecord(players, (player) => player._id);
-  const answersByTrackId = Object.groupBy(answers, (answer) => answer.trackId);
+  const playersById = arrayToRecord(players, (player) => player._id)
+  const answersByTrackId = Object.groupBy(answers, (answer) => answer.trackId)
 
   return tracks.map((track) => {
-    const sourcePlayer = playersById[track.playerId];
-    const answers = answersByTrackId[track._id] ?? [];
+    const sourcePlayer = playersById[track.playerId]
+    const answers = answersByTrackId[track._id] ?? []
 
     const playerAnswers = answers.map(
       ({ playerId, guessedArtistsAt, guessedPlayerAt, guessedTrackNameAt }) => {
-        const player = playersById[playerId];
+        const player = playersById[playerId]
         return {
           ...player,
           guessedArtistsAt,
           guessedPlayerAt,
-          guessedTrackNameAt,
-        };
-      },
-    );
+          guessedTrackNameAt
+        }
+      }
+    )
     return {
       ...track,
       playerAnswers,
-      sourcePlayer,
-    };
-  });
+      sourcePlayer
+    }
+  })
 }
 
 // I used to generate all answers before the round starts, but that wouldn't
 // handle players joining mid round
 async function getOrInsertAnswer(
   ctx: MutationCtx,
-  lobbyId: Id<"lobbies">,
-  playerId: Id<"players">,
-  trackId: Id<"tracks">,
+  lobbyId: Id<'lobbies'>,
+  playerId: Id<'players'>,
+  trackId: Id<'tracks'>
 ) {
   const answer = await ctx.db
-    .query("answers")
-    .withIndex("by_player_and_track", (q) =>
-      q.eq("playerId", playerId).eq("trackId", trackId),
+    .query('answers')
+    .withIndex('by_player_and_track', (q) =>
+      q.eq('playerId', playerId).eq('trackId', trackId)
     )
-    .unique();
+    .unique()
 
-  if (answer !== null) return answer;
+  if (answer !== null) return answer
 
-  const _id = await ctx.db.insert("answers", {
+  const _id = await ctx.db.insert('answers', {
     lobbyId,
     playerId,
     trackId,
-    partialAnswer: "",
-  });
+    partialAnswer: ''
+  })
 
   // no need to retrieve the answer with id since we have insert data right above
   return {
@@ -202,30 +202,27 @@ async function getOrInsertAnswer(
     lobbyId,
     playerId,
     trackId,
-    partialAnswer: "",
-  } satisfies Doc<"answers">;
+    partialAnswer: ''
+  } satisfies Doc<'answers'>
 }
 
 export async function prepareAnswerContext(
   ctx: MutationCtx,
-  playerId: Id<"players">,
-  lobbyId: Id<"lobbies">,
+  playerId: Id<'players'>,
+  lobbyId: Id<'lobbies'>
 ) {
   const { currentTrackId } = await getOrThrow(
     ctx.db.get(lobbyId),
-    `Game not found ${lobbyId}`,
-  );
+    `Game not found ${lobbyId}`
+  )
 
   if (!currentTrackId)
-    throw new Error(`No track currently playing in lobby: ${lobbyId}`);
+    throw new Error(`No track currently playing in lobby: ${lobbyId}`)
 
   const [answer, currentTrack] = await Promise.all([
     getOrInsertAnswer(ctx, lobbyId, playerId, currentTrackId),
-    getOrThrow(
-      ctx.db.get(currentTrackId),
-      `Track not found: ${currentTrackId}`,
-    ),
-  ]);
+    getOrThrow(ctx.db.get(currentTrackId), `Track not found: ${currentTrackId}`)
+  ])
 
-  return { answer, currentTrack };
+  return { answer, currentTrack }
 }

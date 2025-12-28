@@ -2,34 +2,34 @@ import {
   getRouteApi,
   useMatchRoute,
   useNavigate,
-  type MakeRouteMatch,
-} from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { useEffect } from "react";
-import type { Doc } from "../../convex/_generated/dataModel";
+  type MakeRouteMatch
+} from '@tanstack/react-router'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
+import { useEffect } from 'react'
+import type { Doc } from '../../convex/_generated/dataModel'
 
 export const STATUS_TO_ROUTE_MAP: Record<
-  Doc<"lobbies">["status"],
-  MakeRouteMatch["fullPath"]
+  Doc<'lobbies'>['status'],
+  MakeRouteMatch['fullPath']
 > = {
-  waiting: "/$lobbyId/waiting",
-  loading: "/$lobbyId/waiting",
-  playing: "/$lobbyId/playing",
-  paused: "/$lobbyId/playing",
-  finished: "/$lobbyId/finished",
-};
+  waiting: '/$lobbyId/waiting',
+  loading: '/$lobbyId/waiting',
+  playing: '/$lobbyId/playing',
+  paused: '/$lobbyId/playing',
+  finished: '/$lobbyId/finished'
+}
 
-const Route = getRouteApi("/$lobbyId");
+const Route = getRouteApi('/$lobbyId')
 
 export function useGameInfo() {
-  const { lobbyId } = Route.useRouteContext();
-  const navigate = useNavigate();
-  const matchRoute = useMatchRoute();
+  const { lobbyId } = Route.useRouteContext()
+  const navigate = useNavigate()
+  const matchRoute = useMatchRoute()
 
   const gameInfo = useQuery(api.lobbies.getGameInfo, {
-    lobbyId,
-  });
+    lobbyId
+  })
 
   // Like the `/$lobbyId/route` layout, it redirects to the proper page based
   // on the status if not already on that page
@@ -37,12 +37,12 @@ export function useGameInfo() {
   // solely based on the state (like simple ifs), but I think it's cleaner this way
   useEffect(() => {
     if (gameInfo) {
-      const route = STATUS_TO_ROUTE_MAP[gameInfo.game.status];
+      const route = STATUS_TO_ROUTE_MAP[gameInfo.game.status]
       if (!matchRoute({ to: route })) {
-        navigate({ to: route, params: { lobbyId }, replace: true });
+        navigate({ to: route, params: { lobbyId }, replace: true })
       }
     }
-  }, [gameInfo, lobbyId, navigate, matchRoute]);
+  }, [gameInfo, lobbyId, navigate, matchRoute])
 
-  return gameInfo;
+  return gameInfo
 }

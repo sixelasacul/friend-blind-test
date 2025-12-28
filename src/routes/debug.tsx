@@ -1,30 +1,30 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useAction } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { useState } from "react";
+import { createFileRoute } from '@tanstack/react-router'
+import { useAction } from 'convex/react'
+import { api } from '../../convex/_generated/api'
+import { useState } from 'react'
 
-export const Route = createFileRoute("/debug")({
-  component: RouteComponent,
-});
+export const Route = createFileRoute('/debug')({
+  component: RouteComponent
+})
 
-type Artists = (typeof api.artists.search)["_returnType"];
-type Track = (typeof api.debug.generateRelatedTrack)["_returnType"];
+type Artists = (typeof api.artists.search)['_returnType']
+type Track = (typeof api.debug.generateRelatedTrack)['_returnType']
 
 function RouteComponent() {
-  const [artists, setArtists] = useState<Artists>([]);
-  const [track, setTrack] = useState<Track>();
+  const [artists, setArtists] = useState<Artists>([])
+  const [track, setTrack] = useState<Track>()
   // should debounce value or action directly
-  const _searchArtists = useAction(api.artists.search);
-  const _generateRelatedTrack = useAction(api.debug.generateRelatedTrack);
+  const _searchArtists = useAction(api.artists.search)
+  const _generateRelatedTrack = useAction(api.debug.generateRelatedTrack)
 
   async function searchArtists(query: string) {
-    const artists = await _searchArtists({ query });
-    setArtists(artists);
+    const artists = await _searchArtists({ query })
+    setArtists(artists)
   }
 
   async function generateRelatedTrack(artist: string) {
-    const track = await _generateRelatedTrack({ artist });
-    setTrack(track);
+    const track = await _generateRelatedTrack({ artist })
+    setTrack(track)
   }
 
   return (
@@ -38,16 +38,16 @@ function RouteComponent() {
           <li key={artist.url}>
             <button onClick={() => generateRelatedTrack(artist.name)}>
               Select
-            </button>{" "}
+            </button>{' '}
             {artist.name}
           </li>
         ))}
       </ul>
       {track && (
         <p>
-          {track.artists.join(", ")} - {track.name}
+          {track.artists.join(', ')} - {track.name}
         </p>
       )}
     </>
-  );
+  )
 }

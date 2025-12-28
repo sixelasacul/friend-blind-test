@@ -1,74 +1,74 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useAction, useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { useEffect, useState } from "react";
-import { setPlayerArtists } from "../../lib/playerStorage";
-import { useDebounce } from "../../lib/useDebounce";
-import { useGameInfo } from "../../hooks/useGameInfo";
+import { createFileRoute } from '@tanstack/react-router'
+import { useAction, useMutation, useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { useEffect, useState } from 'react'
+import { setPlayerArtists } from '../../lib/playerStorage'
+import { useDebounce } from '../../lib/useDebounce'
+import { useGameInfo } from '../../hooks/useGameInfo'
 
-export const Route = createFileRoute("/$lobbyId/waiting")({
-  component: RouteComponent,
-});
+export const Route = createFileRoute('/$lobbyId/waiting')({
+  component: RouteComponent
+})
 
 function ArtistSearch() {
-  const { playerId } = Route.useRouteContext();
-  useQuery(api.players.getPlayerInfo, { playerId });
-  return null;
+  const { playerId } = Route.useRouteContext()
+  useQuery(api.players.getPlayerInfo, { playerId })
+  return null
 }
 
 function PlayerInfo() {
-  const { playerId } = Route.useRouteContext();
-  useQuery(api.players.getPlayerInfo, { playerId });
-  return null;
+  const { playerId } = Route.useRouteContext()
+  useQuery(api.players.getPlayerInfo, { playerId })
+  return null
 }
 
 function RouteComponent() {
-  const { playerId } = Route.useRouteContext();
+  const { playerId } = Route.useRouteContext()
 
-  const playerInfo = useQuery(api.players.getPlayerInfo, { playerId });
-  const gameInfo = useGameInfo();
+  const playerInfo = useQuery(api.players.getPlayerInfo, { playerId })
+  const gameInfo = useGameInfo()
 
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
-  const searchArtist = useAction(api.artists.search);
-  type Artist = Awaited<ReturnType<typeof searchArtist>>[number];
-  const [results, setResults] = useState<Artist[]>([]);
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300)
+  const searchArtist = useAction(api.artists.search)
+  type Artist = Awaited<ReturnType<typeof searchArtist>>[number]
+  const [results, setResults] = useState<Artist[]>([])
 
-  const saveArtist = useMutation(api.players.saveArtist);
-  const removeArtist = useMutation(api.players.removeArtist);
-  const ready = useMutation(api.players.ready);
+  const saveArtist = useMutation(api.players.saveArtist)
+  const removeArtist = useMutation(api.players.removeArtist)
+  const ready = useMutation(api.players.ready)
 
   useEffect(() => {
-    if (debouncedSearch !== "") {
-      searchArtist({ query: debouncedSearch }).then((res) => setResults(res));
+    if (debouncedSearch !== '') {
+      searchArtist({ query: debouncedSearch }).then((res) => setResults(res))
     } else {
-      setResults([]);
+      setResults([])
     }
-  }, [debouncedSearch, searchArtist]);
+  }, [debouncedSearch, searchArtist])
 
   useEffect(() => {
     if (playerInfo) {
       setPlayerArtists(
         playerInfo.artists.map((artist) => {
-          const { name, externalId } = artist;
+          const { name, externalId } = artist
           return {
             name,
-            externalId,
-          };
+            externalId
+          }
         })
-      );
+      )
     }
-  }, [playerInfo]);
+  }, [playerInfo])
 
   async function saveArtistAndReset({ mbid, name }: Artist) {
-    await saveArtist({ playerId, artist: { externalId: mbid, name } });
-    setResults([]);
-    setSearch("");
+    await saveArtist({ playerId, artist: { externalId: mbid, name } })
+    setResults([])
+    setSearch('')
   }
 
   return (
     <>
-      {gameInfo?.game.status === "loading" && <h3>The game will start!</h3>}
+      {gameInfo?.game.status === 'loading' && <h3>The game will start!</h3>}
       <button onClick={() => ready({ playerId })}>Ready</button>
       <h2>Artists</h2>
       {playerInfo && (
@@ -104,5 +104,5 @@ function RouteComponent() {
       <PlayerInfo />
       <ArtistSearch />
     </>
-  );
+  )
 }
