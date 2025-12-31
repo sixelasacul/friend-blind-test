@@ -1,8 +1,20 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
-import { useGameInfo } from '../../hooks/useGameInfo'
+import {
+  IconUser,
+  IconSearch,
+  IconSettings,
+  IconVolume,
+  IconX
+} from '@tabler/icons-react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useEffect, useState } from 'react'
+import { setPlayerArtists } from '../../lib/playerStorage'
+import { useDebounce } from '../../lib/useDebounce'
+import { useGameInfo } from '../../hooks/useGameInfo'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { ScrollArea } from '../../components/ui/scroll-area'
 import { useVolume } from '../../hooks/useVolume'
 import { Volume } from '../../components/Volume'
 
@@ -46,65 +58,174 @@ function RouteComponent() {
   const { guessedArtistsAt, guessedPlayerAt, guessedTrackNameAt } = answer
 
   return (
-    <>
-      <audio ref={audioRef} src={currentGameTrack.previewUrl} />
-      {/* would be nice to have this in the waiting route without duplication
-      (putting it in the layout, but that means I don't have access to the audio
-      element, so should I move it up too??)
-      I guess I could do an overall Audio component that handles everything? */}
-      <Volume defaultVolume={defaultVolume} onVolumeChange={onVolumeChange} />
+    <div className='bg-background min-h-screen p-4'>
+      <div className='mx-auto max-w-6xl'>
+        {/* Header */}
+        <div className='mb-6 flex items-center justify-between'>
+          <h1 className='text-2xl font-bold md:text-3xl'>Friend Blind Test</h1>
+          <div className='flex items-center gap-3'>
+            <Button variant='ghost' size='icon'>
+              <IconUser className='h-5 w-5' />
+            </Button>
+            <Button variant='ghost' size='icon'>
+              <IconSettings className='h-5 w-5' />
+            </Button>
+            <Button variant='ghost' size='icon'>
+              <IconVolume className='h-5 w-5' />
+            </Button>
+          </div>
+        </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          // or perhaps use withOptimistic?
-          guessTrackNameAndArtists({ answerText, lobbyId, playerId }).then(() =>
-            setAnswerText('')
-          )
-        }}
-      >
-        <label>
-          Guess the track name and artists
-          <input
-            value={answerText}
-            onChange={(e) => setAnswerText(e.target.value)}
-          />
-        </label>
-        <button type='submit'>Guess</button>
-      </form>
+        {/* Guess Input Section */}
+        <div className='mb-6 space-y-3'>
+          <div className='flex flex-col gap-3 sm:flex-row'>
+            <div className='relative flex-1'>
+              <form
+                onSubmit={() => {
+                  e.preventDefault()
+                  // or perhaps use withOptimistic?
+                  guessTrackNameAndArtists({
+                    answerText,
+                    lobbyId,
+                    playerId
+                  }).then(() => setAnswerText(''))
+                }}
+              >
+                <Input
+                  placeholder='Guess'
+                  value={answerText}
+                  onChange={(e) => setAnswerText(e.target.value)}
+                  className='text-lg'
+                />
+              </form>
+              {/*{isClose && (
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-orange-500 font-medium">
+                  Close!
+                </span>
+              )}*/}
+            </div>
+            <div className='flex gap-3'>
+              <div className='bg-card flex min-w-[60px] items-center justify-center rounded-md border px-4 py-2'>
+                {/*<span className="text-lg font-semibold">{timeRemaining}</span>*/}
+              </div>
+              {/*<Button variant="outline">Skip</Button>*/}
+            </div>
+          </div>
+        </div>
 
-      {!!guessedTrackNameAt && <p>Guessed track name</p>}
-      {!!guessedArtistsAt && <p>Guessed artists</p>}
-      {!!guessedPlayerAt && <p>Guessed player</p>}
+        {/* Main Content */}
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          {/* Left Panel - Track History */}
+          <div className='bg-card rounded-lg border p-4'>
+            <h2 className='mb-4 text-xl font-semibold'>Tracks</h2>
+            <ScrollArea className='h-[400px] pr-4'>
+              <div className='space-y-2'>
+                {previousTracks.map((track, index) => (
+                  <div
+                    key={track._id}
+                    className={`rounded-md p-3 ${
+                      track._id === currentGameTrack._id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <div className='font-medium'>Current track</div>
+                    <div className='text-sm'>Track #{index + 1}</div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
 
-      <ul>
-        {players.map((player) => (
-          <li key={player._id}>
-            <button
-              onClick={() =>
-                guessPlayer({ playerId, lobbyId, guessedPlayerId: player._id })
-              }
-            >
-              Vote
-            </button>
-            <p>
-              <span>{player.name}</span> (<span>{player.score}</span>)
-              {player.guessedTrackNameAt && <span>Guessed track name</span>}
-              {player.guessedArtistsAt && <span>Guessed artists</span>}
-              {player.guessedPlayerAt && <span>Guessed player</span>}
-            </p>
-          </li>
-        ))}
-      </ul>
-
-      <ul>
-        {previousTracks.map((track) => (
-          <li key={track._id}>
-            {track.name} - {track.artists.join(', ')} (from{' '}
-            {track.sourcePlayer.name})
-          </li>
-        ))}
-      </ul>
-    </>
+          {/* Right Panel - Player Scores */}
+          <div className='bg-card rounded-lg border p-4'>
+            <h2 className='mb-4 text-xl font-semibold'>Scores</h2>
+            <ScrollArea className='h-[400px] pr-4'>
+              <div className='space-y-2'>
+                {players
+                  .sort((a, b) => b.score - a.score)
+                  .map((player, index) => (
+                    <div
+                      key={player._id}
+                      className='bg-muted flex items-center justify-between rounded-md p-3'
+                    >
+                      <div className='flex items-center gap-3'>
+                        <span className='text-muted-foreground w-6 font-medium'>
+                          #{index + 1}
+                        </span>
+                        <span className='font-medium'>{player.name}</span>
+                      </div>
+                      <span className='text-lg font-bold'>{player.score}</span>
+                    </div>
+                  ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      </div>
+    </div>
   )
+
+  // return (
+  //   <>
+  //     <audio ref={audioRef} src={currentGameTrack.previewUrl} />
+  //     {/* would be nice to have this in the waiting route without duplication
+  //     (putting it in the layout, but that means I don't have access to the audio
+  //     element, so should I move it up too??)
+  //     I guess I could do an overall Audio component that handles everything? */}
+  //     <Volume defaultVolume={defaultVolume} onVolumeChange={onVolumeChange} />
+
+  //     <form
+  //       onSubmit={(e) => {
+  //         e.preventDefault();
+  //         // or perhaps use withOptimistic?
+  //         guessTrackNameAndArtists({ answerText, lobbyId, playerId }).then(() =>
+  //           setAnswerText(""),
+  //         );
+  //       }}
+  //     >
+  //       <label>
+  //         Guess the track name and artists
+  //         <input
+  //           value={answerText}
+  //           onChange={(e) => setAnswerText(e.target.value)}
+  //         />
+  //       </label>
+  //       <button type="submit">Guess</button>
+  //     </form>
+
+  //     {!!guessedTrackNameAt && <p>Guessed track name</p>}
+  //     {!!guessedArtistsAt && <p>Guessed artists</p>}
+  //     {!!guessedPlayerAt && <p>Guessed player</p>}
+
+  //     <ul>
+  //       {players.map((player) => (
+  //         <li key={player._id}>
+  //           <button
+  //             onClick={() =>
+  //               guessPlayer({ playerId, lobbyId, guessedPlayerId: player._id })
+  //             }
+  //           >
+  //             Vote
+  //           </button>
+  //           <p>
+  //             <span>{player.name}</span> (<span>{player.score}</span>)
+  //             {player.guessedTrackNameAt && <span>Guessed track name</span>}
+  //             {player.guessedArtistsAt && <span>Guessed artists</span>}
+  //             {player.guessedPlayerAt && <span>Guessed player</span>}
+  //           </p>
+  //         </li>
+  //       ))}
+  //     </ul>
+
+  //     <ul>
+  //       {previousTracks.map((track) => (
+  //         <li key={track._id}>
+  //           {track.name} - {track.artists.join(", ")} (from{" "}
+  //           {track.sourcePlayer.name})
+  //         </li>
+  //       ))}
+  //     </ul>
+  //   </>
+  // );
 }

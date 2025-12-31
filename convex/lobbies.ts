@@ -117,10 +117,10 @@ export const join = mutation({
       online: true
     })
 
-    ctx.scheduler.runAfter(0, api.presence.updatePresence, {
-      playerId,
-      online: true
-    })
+    // ctx.scheduler.runAfter(0, api.presence.updatePresence, {
+    //   playerId,
+    //   online: true,
+    // });
 
     return playerId
   }
