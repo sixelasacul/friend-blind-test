@@ -3,7 +3,7 @@ import { devtools } from '@tanstack/devtools-vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
-import { fileURLToPath, URL } from 'node:url'
+import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,7 +22,9 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      // '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@/convex': path.resolve(__dirname, './convex/_generated/'),
+      '@': path.resolve(__dirname, './src')
     }
   }
 })

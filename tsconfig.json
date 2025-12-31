@@ -29,10 +29,8 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      // which one? Should be aligned with vite config
       "@/*": ["./src/*"],
-      "~/*": ["./src/*"],
-      "~/convex/*": ["./convex/_generated/*"]
+      "@/convex/*": ["./convex/_generated/*"]
     }
   }
 }
