@@ -1,20 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  IconUser,
-  IconSearch,
-  IconSettings,
-  IconVolume,
-  IconX
-} from '@tabler/icons-react'
+import { IconX } from '@tabler/icons-react'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import { api } from '@/convex/api'
 import { useEffect, useState } from 'react'
-import { setPlayerArtists } from '../../lib/playerStorage'
-import { useDebounce } from '../../lib/useDebounce'
-import { useGameInfo } from '../../hooks/useGameInfo'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { ScrollArea } from '../../components/ui/scroll-area'
+import { setPlayerArtists } from '@/lib/playerStorage'
+import { useDebounce } from '@/lib/useDebounce'
+import { useGameInfo } from '@/hooks/useGameInfo'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Combobox,
   ComboboxContent,
@@ -23,25 +16,16 @@ import {
   ComboboxItem,
   ComboboxList
 } from '../../components/ui/combobox'
-import { Label } from '../../components/ui/label'
+import { Input } from '@/components/ui/input'
 
-const LAST_FM_PLACEHOLDER_IMAGE = '2a96cbd8b46e442fc41c2b86b821562f'
+// LAST FM DOESN'T RETURN IMAGES ANYMORE:
+// https://stackoverflow.com/questions/55978243/last-fm-api-returns-same-white-star-image-for-all-artists
+// People suggest to use MusicBrainz directly, as I also commented in LastFmApi
+// Or I can react for their API to start with: https://musicbrainz.org/doc/MusicBrainz_API
 
 export const Route = createFileRoute('/$lobbyId/waiting')({
   component: RouteComponent
 })
-
-function ArtistSearch() {
-  const { playerId } = Route.useRouteContext()
-  useQuery(api.players.getPlayerInfo, { playerId })
-  return null
-}
-
-function PlayerInfo() {
-  const { playerId } = Route.useRouteContext()
-  useQuery(api.players.getPlayerInfo, { playerId })
-  return null
-}
 
 function RouteComponent() {
   const { playerId } = Route.useRouteContext()
@@ -58,6 +42,7 @@ function RouteComponent() {
   const saveArtist = useMutation(api.players.saveArtist)
   const removeArtist = useMutation(api.players.removeArtist)
   const ready = useMutation(api.players.ready)
+  const updateName = useMutation(api.players.updateName)
 
   useEffect(() => {
     if (debouncedSearch !== '') {
@@ -89,8 +74,6 @@ function RouteComponent() {
     setSearch('')
   }
 
-  console.log(artistsFromSearch)
-
   return (
     <>
       {/* Main Content */}
@@ -103,6 +86,7 @@ function RouteComponent() {
           <div className='relative mb-4'>
             <Combobox<Artist>
               items={artistsFromSearch}
+              itemToStringLabel={(artist) => artist.name}
               onInputValueChange={setSearch}
               onValueChange={(artist) => {
                 if (!artist) return
@@ -120,10 +104,7 @@ function RouteComponent() {
                 <ComboboxList>
                   {(artist: Artist) => (
                     <ComboboxItem value={artist}>
-                      <>
-                        <img src={artist.image[0]['#text']} />
-                        <span>{artist.name}</span>
-                      </>
+                      <span>{artist.name}</span>
                     </ComboboxItem>
                   )}
                 </ComboboxList>
@@ -164,22 +145,14 @@ function RouteComponent() {
           <ScrollArea className='h-[400px] pr-4'>
             <div className='space-y-2'>
               {gameInfo?.players.map((player) => (
-                <div
+                <PlayerCard
                   key={player._id}
-                  className='bg-muted flex items-center justify-between rounded-md p-3'
-                >
-                  <span>{player.name}</span>
-                  <div className='flex items-center gap-2'>
-                    <div
-                      className={`h-2 w-2 rounded-full ${
-                        player.ready ? 'bg-green-500' : 'bg-yellow-500'
-                      }`}
-                    />
-                    <span className='text-muted-foreground text-sm'>
-                      {player.ready ? 'Ready' : 'Not ready'}
-                    </span>
-                  </div>
-                </div>
+                  name={player.name}
+                  ready={player.ready}
+                  isCurrentPlayer={player._id === playerId}
+                  onReady={() => ready({ playerId })}
+                  onUpdateName={(name) => updateName({ name, playerId })}
+                />
               ))}
             </div>
           </ScrollArea>
@@ -227,4 +200,53 @@ function RouteComponent() {
   //     <ArtistSearch />
   //   </>
   // );
+}
+
+type PlayerCardProps = {
+  name: string
+  ready: boolean
+  isCurrentPlayer: boolean
+  onReady: () => void
+  onUpdateName: (name: string) => void
+}
+
+function PlayerCard({
+  name,
+  ready,
+  onReady,
+  onUpdateName,
+  isCurrentPlayer
+}: PlayerCardProps) {
+  const readyDisplay = (
+    <div className='flex items-center gap-2'>
+      <div
+        className={`h-2 w-2 rounded-full ${
+          ready ? 'bg-green-500' : 'bg-yellow-500'
+        }`}
+      />
+      <span className='text-muted-foreground text-sm'>
+        {ready ? 'Ready' : 'Not ready'}
+      </span>
+    </div>
+  )
+
+  return (
+    <div className='bg-muted flex items-center justify-between rounded-md p-3'>
+      {isCurrentPlayer ? (
+        <Input
+          defaultValue={name}
+          onBlur={(e) => onUpdateName(e.target.value)}
+        />
+      ) : (
+        <span>{name}</span>
+      )}
+      {isCurrentPlayer ? (
+        <Button variant='outline' onClick={onReady}>
+          {readyDisplay}
+        </Button>
+      ) : (
+        readyDisplay
+      )}
+    </div>
+  )
 }

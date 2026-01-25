@@ -58,112 +58,94 @@ function RouteComponent() {
   const { guessedArtistsAt, guessedPlayerAt, guessedTrackNameAt } = answer
 
   return (
-    <div className='bg-background min-h-screen p-4'>
-      <div className='mx-auto max-w-6xl'>
-        {/* Header */}
-        <div className='mb-6 flex items-center justify-between'>
-          <h1 className='text-2xl font-bold md:text-3xl'>Friend Blind Test</h1>
-          <div className='flex items-center gap-3'>
-            <Button variant='ghost' size='icon'>
-              <IconUser className='h-5 w-5' />
-            </Button>
-            <Button variant='ghost' size='icon'>
-              <IconSettings className='h-5 w-5' />
-            </Button>
-            <Button variant='ghost' size='icon'>
-              <IconVolume className='h-5 w-5' />
-            </Button>
-          </div>
-        </div>
-
-        {/* Guess Input Section */}
-        <div className='mb-6 space-y-3'>
-          <div className='flex flex-col gap-3 sm:flex-row'>
-            <div className='relative flex-1'>
-              <form
-                onSubmit={() => {
-                  e.preventDefault()
-                  // or perhaps use withOptimistic?
-                  guessTrackNameAndArtists({
-                    answerText,
-                    lobbyId,
-                    playerId
-                  }).then(() => setAnswerText(''))
-                }}
-              >
-                <Input
-                  placeholder='Guess'
-                  value={answerText}
-                  onChange={(e) => setAnswerText(e.target.value)}
-                  className='text-lg'
-                />
-              </form>
-              {/*{isClose && (
+    <>
+      {/* Guess Input Section */}
+      <div className='mb-6 space-y-3'>
+        <div className='flex flex-col gap-3 sm:flex-row'>
+          <div className='relative flex-1'>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                // or perhaps use withOptimistic?
+                guessTrackNameAndArtists({
+                  answerText,
+                  lobbyId,
+                  playerId
+                }).then(() => setAnswerText(''))
+              }}
+            >
+              <Input
+                placeholder='Guess'
+                value={answerText}
+                onChange={(e) => setAnswerText(e.target.value)}
+                className='text-lg'
+              />
+            </form>
+            {/*{isClose && (
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-orange-500 font-medium">
                   Close!
                 </span>
               )}*/}
-            </div>
-            <div className='flex gap-3'>
-              <div className='bg-card flex min-w-[60px] items-center justify-center rounded-md border px-4 py-2'>
-                {/*<span className="text-lg font-semibold">{timeRemaining}</span>*/}
-              </div>
-              {/*<Button variant="outline">Skip</Button>*/}
-            </div>
           </div>
-        </div>
-
-        {/* Main Content */}
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          {/* Left Panel - Track History */}
-          <div className='bg-card rounded-lg border p-4'>
-            <h2 className='mb-4 text-xl font-semibold'>Tracks</h2>
-            <ScrollArea className='h-[400px] pr-4'>
-              <div className='space-y-2'>
-                {previousTracks.map((track, index) => (
-                  <div
-                    key={track._id}
-                    className={`rounded-md p-3 ${
-                      track._id === currentGameTrack._id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    <div className='font-medium'>Current track</div>
-                    <div className='text-sm'>Track #{index + 1}</div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Right Panel - Player Scores */}
-          <div className='bg-card rounded-lg border p-4'>
-            <h2 className='mb-4 text-xl font-semibold'>Scores</h2>
-            <ScrollArea className='h-[400px] pr-4'>
-              <div className='space-y-2'>
-                {players
-                  .sort((a, b) => b.score - a.score)
-                  .map((player, index) => (
-                    <div
-                      key={player._id}
-                      className='bg-muted flex items-center justify-between rounded-md p-3'
-                    >
-                      <div className='flex items-center gap-3'>
-                        <span className='text-muted-foreground w-6 font-medium'>
-                          #{index + 1}
-                        </span>
-                        <span className='font-medium'>{player.name}</span>
-                      </div>
-                      <span className='text-lg font-bold'>{player.score}</span>
-                    </div>
-                  ))}
-              </div>
-            </ScrollArea>
+          <div className='flex gap-3'>
+            <div className='bg-card flex min-w-[60px] items-center justify-center rounded-md border px-4 py-2'>
+              {/*<span className="text-lg font-semibold">{timeRemaining}</span>*/}
+            </div>
+            {/*<Button variant="outline">Skip</Button>*/}
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Main Content */}
+      <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+        {/* Left Panel - Track History */}
+        <div className='bg-card rounded-lg border p-4'>
+          <h2 className='mb-4 text-xl font-semibold'>Tracks</h2>
+          <ScrollArea className='h-[400px] pr-4'>
+            <div className='space-y-2'>
+              {previousTracks.map((track, index) => (
+                <div
+                  key={track._id}
+                  className={`rounded-md p-3 ${
+                    track._id === currentGameTrack._id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
+                >
+                  <div className='font-medium'>Current track</div>
+                  <div className='text-sm'>Track #{index + 1}</div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Right Panel - Player Scores */}
+        <div className='bg-card rounded-lg border p-4'>
+          <h2 className='mb-4 text-xl font-semibold'>Scores</h2>
+          <ScrollArea className='h-[400px] pr-4'>
+            <div className='space-y-2'>
+              {players
+                .sort((a, b) => b.score - a.score)
+                .map((player, index) => (
+                  <div
+                    key={player._id}
+                    className='bg-muted flex items-center justify-between rounded-md p-3'
+                  >
+                    <div className='flex items-center gap-3'>
+                      <span className='text-muted-foreground w-6 font-medium'>
+                        #{index + 1}
+                      </span>
+                      <span className='font-medium'>{player.name}</span>
+                    </div>
+                    <span className='text-lg font-bold'>{player.score}</span>
+                  </div>
+                ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+    </>
   )
 
   // return (

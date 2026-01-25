@@ -1,5 +1,7 @@
 # friend-blind-test
 
+Theme: https://ui.shadcn.com/create?base=base&style=maia&baseColor=gray&theme=orange&iconLibrary=tabler&font=dm-sans&menuAccent=bold&menuColor=default&radius=default&item=preview
+
 ## Preview tracks
 
 TO play the songs for the blind test, I have 2 solutions:
