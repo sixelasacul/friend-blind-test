@@ -9,6 +9,7 @@ import { api } from '@/convex/api'
 import { useGameInfo } from '@/hooks/useGameInfo'
 import { setPlayerArtists } from '@/lib/playerStorage'
 import { useDebounce } from '@/lib/useDebounce'
+import { cn } from '@/lib/utils'
 import {
   Combobox,
   ComboboxContent,
@@ -113,7 +114,7 @@ function RouteComponent() {
           </div>
 
           {/* Selected Artists List */}
-          <ScrollArea className='h-[400px] pr-4'>
+          <ScrollArea className='h-100 pr-4'>
             <div className='space-y-2'>
               {playerInfo?.artists.map((artist) => (
                 <div
@@ -137,21 +138,32 @@ function RouteComponent() {
 
         {/* Right Panel - Players */}
         <div className='rounded-lg border bg-card p-4'>
-          <div className='mb-4 flex items-center justify-between'>
-            <h2 className='text-xl font-semibold'>Players</h2>
-          </div>
+          <h2 className='mb-4 text-xl font-semibold'>Players</h2>
 
-          {/* Players List */}
-          <ScrollArea className='h-[400px] pr-4'>
+          {/* Your Profile Section */}
+          {playerInfo && (
+            <YourProfile
+              name={playerInfo.player.name}
+              ready={playerInfo.player.ready}
+              onReady={() => ready({ playerId })}
+              onUpdateName={(name) => updateName({ name, playerId })}
+            />
+          )}
+
+          {/* All Players List */}
+          <div className='mt-4 mb-2 border-t pt-4'>
+            <span className='text-sm font-medium text-muted-foreground'>
+              All Players
+            </span>
+          </div>
+          <ScrollArea className='h-72 pr-4'>
             <div className='space-y-2'>
               {gameInfo?.players.map((player) => (
-                <PlayerCard
+                <PlayerListItem
                   key={player._id}
                   name={player.name}
                   ready={player.ready}
                   isCurrentPlayer={player._id === playerId}
-                  onReady={() => ready({ playerId })}
-                  onUpdateName={(name) => updateName({ name, playerId })}
                 />
               ))}
             </div>
@@ -202,51 +214,69 @@ function RouteComponent() {
   // );
 }
 
-type PlayerCardProps = {
+type YourProfileProps = {
   name: string
   ready: boolean
-  isCurrentPlayer: boolean
   onReady: () => void
   onUpdateName: (name: string) => void
 }
 
-function PlayerCard({
-  name,
-  ready,
-  onReady,
-  onUpdateName,
-  isCurrentPlayer
-}: PlayerCardProps) {
-  const readyDisplay = (
-    <div className='flex items-center gap-2'>
-      <div
-        className={`h-2 w-2 rounded-full ${
-          ready ? 'bg-green-500' : 'bg-yellow-500'
-        }`}
-      />
-      <span className='text-sm text-muted-foreground'>
-        {ready ? 'Ready' : 'Not ready'}
-      </span>
-    </div>
-  )
-
+function YourProfile({ name, ready, onReady, onUpdateName }: YourProfileProps) {
   return (
-    <div className='flex items-center justify-between rounded-md bg-muted p-3'>
-      {isCurrentPlayer ? (
+    <div className='rounded-lg border p-4'>
+      <h3 className='mb-3 text-sm font-medium text-muted-foreground'>
+        Your Profile
+      </h3>
+      <div className='flex items-center gap-3'>
         <Input
           defaultValue={name}
           onBlur={(e) => onUpdateName(e.target.value)}
+          className='flex-1'
+          placeholder='Enter your name'
         />
-      ) : (
-        <span>{name}</span>
-      )}
-      {isCurrentPlayer ? (
-        <Button variant='outline' onClick={onReady}>
-          {readyDisplay}
+        <Button
+          variant={ready ? 'default' : 'outline'}
+          onClick={onReady}
+          className='shrink-0'
+        >
+          {ready ? '✓ Ready' : 'Ready up'}
         </Button>
-      ) : (
-        readyDisplay
+      </div>
+    </div>
+  )
+}
+
+type PlayerListItemProps = {
+  name: string
+  ready: boolean
+  isCurrentPlayer: boolean
+}
+
+function PlayerListItem({ name, ready, isCurrentPlayer }: PlayerListItemProps) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between rounded-md p-3',
+        isCurrentPlayer ? 'border border-primary/30 bg-primary/5' : 'bg-muted'
       )}
+    >
+      <div className='flex items-center gap-2'>
+        <span>{name}</span>
+        {isCurrentPlayer && (
+          <span className='text-xs text-muted-foreground'>(You)</span>
+        )}
+      </div>
+      <div className='flex items-center gap-2'>
+        <div
+          className={cn(
+            'h-2 w-2 rounded-full',
+            ready ? 'bg-green-500' : 'bg-yellow-500'
+          )}
+        />
+        <span className='text-sm text-muted-foreground'>
+          {ready ? 'Ready' : 'Not ready'}
+        </span>
+      </div>
     </div>
   )
 }
