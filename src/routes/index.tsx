@@ -41,7 +41,7 @@ function RouteComponent() {
         {/* Play Button */}
         <Button
           size='lg'
-          className='px-8 py-6 text-lg'
+          className='cursor-pointer px-8 py-6 text-lg'
           onClick={createLobbyThenRedirect}
           disabled={isPending}
         >

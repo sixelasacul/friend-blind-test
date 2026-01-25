@@ -1,8 +1,8 @@
 import type { Id } from '../../../convex/_generated/dataModel'
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
-import { useEffect, useState } from 'react'
+import { IconLink, IconHelp, IconVolume } from '@tabler/icons-react'
+import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
 import { api } from '../../../convex/_generated/api'
+import { Button } from '../../components/ui/button'
 import { STATUS_TO_ROUTE_MAP } from '../../hooks/useGameInfo'
 import { usePresence } from '../../hooks/usePresence'
 import {
@@ -11,8 +11,7 @@ import {
   getPlayerId,
   getPlayerName,
   setLobbyId,
-  setPlayerId,
-  setPlayerName
+  setPlayerId
 } from '../../lib/playerStorage'
 
 export const Route = createFileRoute('/$lobbyId')({
@@ -82,33 +81,28 @@ export const Route = createFileRoute('/$lobbyId')({
 
 // should show player name + edit
 function RouteComponent() {
-  usePresence()
-  const { playerId, lobbyId } = Route.useRouteContext()
-
-  const playerInfo = useQuery(api.players.getPlayerInfo, { playerId })
-
-  const [name, setName] = useState('')
-  const updateName = useMutation(api.players.updateName)
-
-  useEffect(() => {
-    if (playerInfo) {
-      setName(playerInfo.player.name)
-      setPlayerName(playerInfo.player.name)
-    }
-  }, [playerInfo])
+  // usePresence();
+  const { lobbyId } = Route.useRouteContext()
 
   return (
-    <>
-      <div className='flex flex-row justify-between'>
-        <h1>Lobby ID: {lobbyId}</h1>
-        <div>
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-          <button onClick={() => updateName({ playerId, name })}>
-            Save name
-          </button>
+    <div className='mx-auto max-w-6xl'>
+      <div className='mb-6 flex items-center justify-between'>
+        <Link to='/'>
+          <h1 className='text-2xl font-bold md:text-3xl'>Friend Blind Test</h1>
+        </Link>
+        <div className='flex items-center gap-3'>
+          <Button variant='ghost' size='icon'>
+            <IconLink className='h-5 w-5' />
+          </Button>
+          <Button variant='ghost' size='icon'>
+            <IconHelp className='h-5 w-5' />
+          </Button>
+          <Button variant='ghost' size='icon'>
+            <IconVolume className='h-5 w-5' />
+          </Button>
         </div>
       </div>
       <Outlet />
-    </>
+    </div>
   )
 }
