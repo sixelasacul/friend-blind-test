@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
 import { useEffect, useState } from 'react'
+import { api } from '../../../convex/_generated/api'
+import { useGameInfo } from '../../hooks/useGameInfo'
 import { setPlayerArtists } from '../../lib/playerStorage'
 import { useDebounce } from '../../lib/useDebounce'
-import { useGameInfo } from '../../hooks/useGameInfo'
 
 export const Route = createFileRoute('/$lobbyId/waiting')({
   component: RouteComponent

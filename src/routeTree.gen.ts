@@ -8,13 +8,13 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { Route as LobbyIdFinishedRouteImport } from './routes/$lobbyId/finished'
+import { Route as LobbyIdPlayingRouteImport } from './routes/$lobbyId/playing'
+import { Route as LobbyIdRouteRouteImport } from './routes/$lobbyId/route'
+import { Route as LobbyIdWaitingRouteImport } from './routes/$lobbyId/waiting'
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DebugRouteImport } from './routes/debug'
-import { Route as LobbyIdRouteRouteImport } from './routes/$lobbyId/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as LobbyIdWaitingRouteImport } from './routes/$lobbyId/waiting'
-import { Route as LobbyIdPlayingRouteImport } from './routes/$lobbyId/playing'
-import { Route as LobbyIdFinishedRouteImport } from './routes/$lobbyId/finished'
 
 const DebugRoute = DebugRouteImport.update({
   id: '/debug',

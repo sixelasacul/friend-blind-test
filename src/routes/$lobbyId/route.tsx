@@ -1,6 +1,10 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { useMutation, useQuery } from 'convex/react'
+import { useEffect, useState } from 'react'
+import { api } from '../../../convex/_generated/api'
+import { STATUS_TO_ROUTE_MAP } from '../../hooks/useGameInfo'
+import { usePresence } from '../../hooks/usePresence'
 import {
   getLobbyId,
   getPlayerArtists,
@@ -10,10 +14,6 @@ import {
   setPlayerId,
   setPlayerName
 } from '../../lib/playerStorage'
-import { useEffect, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
-import { STATUS_TO_ROUTE_MAP } from '../../hooks/useGameInfo'
-import { usePresence } from '../../hooks/usePresence'
 
 export const Route = createFileRoute('/$lobbyId')({
   component: RouteComponent,
