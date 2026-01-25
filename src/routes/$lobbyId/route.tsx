@@ -1,18 +1,19 @@
-import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
-import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { useMutation, useQuery } from 'convex/react'
+import { useEffect, useState } from 'react'
+import { api } from '../../../convex/_generated/api'
+import { STATUS_TO_ROUTE_MAP } from '../../hooks/useGameInfo'
+import { usePresence } from '../../hooks/usePresence'
 import {
   getLobbyId,
   getPlayerArtists,
   getPlayerId,
   getPlayerName,
   setLobbyId,
-  setPlayerId
+  setPlayerId,
+  setPlayerName
 } from '../../lib/playerStorage'
-import { STATUS_TO_ROUTE_MAP } from '../../hooks/useGameInfo'
-import { usePresence } from '../../hooks/usePresence'
-import { IconLink, IconHelp, IconVolume } from '@tabler/icons-react'
-import { Button } from '../../components/ui/button'
 
 export const Route = createFileRoute('/$lobbyId')({
   component: RouteComponent,
@@ -81,28 +82,33 @@ export const Route = createFileRoute('/$lobbyId')({
 
 // should show player name + edit
 function RouteComponent() {
-  // usePresence();
-  const { lobbyId } = Route.useRouteContext()
+  usePresence()
+  const { playerId, lobbyId } = Route.useRouteContext()
+
+  const playerInfo = useQuery(api.players.getPlayerInfo, { playerId })
+
+  const [name, setName] = useState('')
+  const updateName = useMutation(api.players.updateName)
+
+  useEffect(() => {
+    if (playerInfo) {
+      setName(playerInfo.player.name)
+      setPlayerName(playerInfo.player.name)
+    }
+  }, [playerInfo])
 
   return (
-    <div className='mx-auto max-w-6xl'>
-      <div className='mb-6 flex items-center justify-between'>
-        <Link to='/'>
-          <h1 className='text-2xl font-bold md:text-3xl'>Friend Blind Test</h1>
-        </Link>
-        <div className='flex items-center gap-3'>
-          <Button variant='ghost' size='icon'>
-            <IconLink className='h-5 w-5' />
-          </Button>
-          <Button variant='ghost' size='icon'>
-            <IconHelp className='h-5 w-5' />
-          </Button>
-          <Button variant='ghost' size='icon'>
-            <IconVolume className='h-5 w-5' />
-          </Button>
+    <>
+      <div className='flex flex-row justify-between'>
+        <h1>Lobby ID: {lobbyId}</h1>
+        <div>
+          <input value={name} onChange={(e) => setName(e.target.value)} />
+          <button onClick={() => updateName({ playerId, name })}>
+            Save name
+          </button>
         </div>
       </div>
       <Outlet />
-    </div>
+    </>
   )
 }

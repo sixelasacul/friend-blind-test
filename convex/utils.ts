@@ -1,5 +1,5 @@
-import { QueryCtx, MutationCtx } from './_generated/server'
 import { Doc, Id } from './_generated/dataModel'
+import { QueryCtx, MutationCtx } from './_generated/server'
 import { computeScore } from './score'
 
 export type GenericCtx = QueryCtx | MutationCtx

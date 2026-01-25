@@ -6,14 +6,7 @@ pre-commit:
     - name: format (oxfmt)
       run: pnpm oxfmt --write {staged_files}
       stage_fixed: true
-    - name: format (prettier)
-      run: pnpm prettier --write {staged_files}
-      stage_fixed: true
     - name: lint (oxlint)
       run: pnpm oxlint --fix {staged_files}
-      glob: '*.{js,ts,jsx,tsx}'
-      stage_fixed: true
-    - name: lint (eslint)
-      run: pnpm eslint --fix {staged_files}
       glob: '*.{js,ts,jsx,tsx}'
       stage_fixed: true

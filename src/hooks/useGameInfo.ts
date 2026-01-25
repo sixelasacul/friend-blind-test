@@ -1,3 +1,4 @@
+import type { Doc } from '../../convex/_generated/dataModel'
 import {
   getRouteApi,
   useMatchRoute,
@@ -5,9 +6,8 @@ import {
   type MakeRouteMatch
 } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
-import { api } from '../../convex/_generated/api'
 import { useEffect } from 'react'
-import type { Doc } from '../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
 
 export const STATUS_TO_ROUTE_MAP: Record<
   Doc<'lobbies'>['status'],

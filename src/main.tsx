@@ -1,14 +1,12 @@
+import './index.css'
+import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { ConvexHttpClient } from 'convex/browser'
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
-
+import reportWebVitals from './reportWebVitals.ts'
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
-import { ConvexHttpClient } from 'convex/browser'
-import reportWebVitals from './reportWebVitals.ts'
-
-import './index.css'
 
 // Create a new router instance
 const router = createRouter({
